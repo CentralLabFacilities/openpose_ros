@@ -201,8 +201,8 @@ openpose_ros::BodyPartDetection initBodyPartDetection() {
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "detect_people_server");
-	ros::NodeHandle n;
-
+	
+	ros::NodeHandle localNH("~");
     //init openpose
     netInputSize = op::Point<int>(320,160);
     netOutputSize = op::Point<int>(320,160);
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
     scaleNumber = 1;
     scaleGap = 0.3;
     poseModel = op::PoseModel::COCO_18;
-    std::string modelsFolder = getParam(n, "model_folder", std::string("/vol/robocup/share/openpose/models/"));
+    std::string modelsFolder = getParam(localNH, "model_folder", std::string("/vol/robocup/share/openpose/models/"));
     int gpuId = 0;
     cocoBodyParts = op::POSE_COCO_BODY_PARTS;
 
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 
     visualize = true;
 
-    
+    ros::NodeHandle n;
     //advertise service to get detected people poses
     ros::ServiceServer service = n.advertiseService("detect_people", detectPeopleCb);
     //subscriber to recieve rgb image
