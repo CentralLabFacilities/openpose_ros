@@ -169,7 +169,7 @@ target_link_libraries(detect_people_server
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME} detect_people_server
+install(TARGETS detect_people_server
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
