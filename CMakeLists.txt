@@ -151,6 +151,7 @@ add_dependencies(detect_people_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(detect_people_server
    ${catkin_LIBRARIES}
    ${OPENPOSE_DIR}/lib/libopenpose.so
+   ${OPENPOSE_DIR}/lib64/libcudart.so.8.0
  )
 
 #############
