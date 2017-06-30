@@ -124,7 +124,7 @@ ENDIF()
 ## Your package locations should be listed before other locations
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${OPENPOSE_DIR}/include/caffee
+  ${OPENPOSE_DIR}/include/caffe
   ${OPENPOSE_DIR}/include/openpose
 )
 
