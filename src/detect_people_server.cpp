@@ -211,7 +211,7 @@ int main(int argc, char **argv)
     scaleGap = 0.3;
     poseModel = op::PoseModel::COCO_18;
     std::string modelsFolder = "/vol/robocup/share/openpose/models/";
-    localNH.getParam("model_folder", modelsFolder&)
+    //localNH.getParam("model_folder", modelsFolder&)
     int gpuId = 0;
     cocoBodyParts = op::POSE_COCO_BODY_PARTS;
 
