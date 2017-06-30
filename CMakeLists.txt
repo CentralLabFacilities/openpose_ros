@@ -169,9 +169,9 @@ target_link_libraries(detect_people_server
 # )
 
 ## Mark executables and/or libraries for installation
-#install(TARGETS ${PROJECT_NAME} detect_people_server
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS ${PROJECT_NAME} detect_people_server
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/
