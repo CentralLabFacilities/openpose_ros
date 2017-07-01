@@ -15,6 +15,7 @@
 #include <ros/init.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/Point.h>
 
 #include <cv_bridge/cv_bridge.h>
 
@@ -127,9 +128,9 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             memcpy(&Y, &pointcloud.data[arrayPosY], sizeof(float));
             memcpy(&Z, &pointcloud.data[arrayPosZ], sizeof(float));
 
-            bodypart.x = X;
-            bodypart.y = Y;
-            bodypart.z = Z;
+            bodypart.pos.x = X;
+            bodypart.pos.y = Y;
+            bodypart.pos.z = Z;
 
             std::string bodypart_name = cocoBodyParts[j];
 
@@ -191,9 +192,9 @@ openpose_ros::PersonDetection initPersonDetection() {
 
 openpose_ros::BodyPartDetection initBodyPartDetection() {
     openpose_ros::BodyPartDetection bodypart;
-    bodypart.x = 0.0;
-    bodypart.y = 0.0;
-    bodypart.z = 0.0;
+    bodypart.pos.x = 0.0;
+    bodypart.pos.y = 0.0;
+    bodypart.pos.z = 0.0;
     bodypart.confidence = 0;
     return bodypart;
 }

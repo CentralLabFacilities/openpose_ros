@@ -12,6 +12,7 @@ find_package(catkin REQUIRED
   std_msgs
   message_generation
   sensor_msgs
+  geometry_msgs
   cv_bridge
 )
 
@@ -71,7 +72,8 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
-   std_msgs  # Or other packages containing msgs
+   std_msgs
+   geometry_msgs# Or other packages containing msgs
  )
 
 ################################################
@@ -199,3 +201,7 @@ install(TARGETS detect_people_server
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+#install rosjava messages
+install(DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_MAVEN_DESTINATION}/org/ros/rosjava_messages/
+DESTINATION ${CATKIN_GLOBAL_MAVEN_DESTINATION}/org/ros/rosjava_messages)
