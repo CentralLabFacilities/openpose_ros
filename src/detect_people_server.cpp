@@ -106,7 +106,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
         for(size_t j = 0; j<poseKeypoints.getSize(1); ++j) {
 
             size_t bodypart_id = 3*(i*poseKeypoints.getSize(2) + j);
-            openpose_ros::BodyPartDetection bodypart;
+            openpose_ros::BodyPartDetection bodypart = initBodyPartDetection();
             bodypart.confidence = poseKeypoints[bodypart_id + 2];
 
             //credit to Saurav Agarwal (http://sauravag.com/2016/11/how-to-get-depth-xyz-of-a-2d-pixel-from-pointcloud2-or-kinect-data/)
@@ -137,8 +137,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             baseToCam.mult(bodyPartTransform,transform.inverse());
 
             bodypart.pos.x = baseToCam.getOrigin().x();
-            bodypart.pos.y = baseToCam.getOrigin().x();
-            bodypart.pos.z = baseToCam.getOrigin().x();
+            bodypart.pos.y = baseToCam.getOrigin().y();
+            bodypart.pos.z = baseToCam.getOrigin().z();
 
             std::string bodypart_name = cocoBodyParts[j];
 
