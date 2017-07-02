@@ -137,8 +137,9 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             tf::Transform baseToCam;
             tf::Transform bodyPartTransform;
             bodyPartTransform.setOrigin(tf::Vector3(X,Y,Z));
+            bodyPartTransform.setRotation(tf::Quaternion(0,0,0,1));
 
-            baseToCam.mult(bodyPartTransform,transform);
+            baseToCam.mult(transform,bodyPartTransform);
 
             bodypart.pos.x = baseToCam.getOrigin().x();
             bodypart.pos.y = baseToCam.getOrigin().y();
@@ -276,7 +277,7 @@ int main(int argc, char **argv)
     try {
         listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0) );
         listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
-        ROS_INFO("Got TF");
+        ROS_INFO("Got TF: %f %f %f",transform.getOrigin().x(),transform.getOrigin().y(),transform.getOrigin().z());
     } catch (tf::TransformException ex) {
         ROS_ERROR("Could not get transform from camera frame to base frame: %s",ex.what());
         return 1;
