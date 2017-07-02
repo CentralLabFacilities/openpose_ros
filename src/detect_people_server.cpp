@@ -114,6 +114,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             int u = poseKeypoints[bodypart_id];
             int v = poseKeypoints[bodypart_id + 1];
 
+            ROS_INFO("u: %d, v: %d",u,v);
+
             int pcWidth = pointcloud.width;
             int pcHeight = pointcloud.height;
 
@@ -130,6 +132,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             memcpy(&Y, &pointcloud.data[arrayPosY], sizeof(float));
             memcpy(&Z, &pointcloud.data[arrayPosZ], sizeof(float));
 
+            ROS_INFO("X: %f, Y: %f, Z: %f",X,Y,Z);
+
             tf::Transform baseToCam;
             tf::Transform bodyPartTransform;
             bodyPartTransform.setOrigin(tf::Vector3(X,Y,Z));
@@ -142,6 +146,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
 
             std::string bodypart_name = cocoBodyParts[j];
 
+            ROS_INFO("BodyPartName: %s", bodypart_name.c_str());
 
             if (bodypart_name == "Nose") person.Nose = bodypart;
             else if (bodypart_name == "Neck") person.Neck = bodypart;
