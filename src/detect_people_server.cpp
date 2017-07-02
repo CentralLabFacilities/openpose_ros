@@ -139,7 +139,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             bodyPartTransform.setOrigin(tf::Vector3(X,Y,Z));
             bodyPartTransform.setRotation(tf::Quaternion(0,0,0,1));
 
-            baseToCam.mult(transform,bodyPartTransform);
+            baseToCam.mult(transform.inverse(),bodyPartTransform);
 
             bodypart.pos.x = baseToCam.getOrigin().x();
             bodypart.pos.y = baseToCam.getOrigin().y();
