@@ -105,7 +105,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
         openpose_ros::PersonDetection person = initPersonDetection();
         for(size_t j = 0; j<poseKeypoints.getSize(1); ++j) {
 
-            size_t bodypart_id = 3*(i*poseKeypoints.getSize(2) + j);
+            size_t bodypart_id = 3*(i*poseKeypoints.getSize(1) + j);
             openpose_ros::BodyPartDetection bodypart = initBodyPartDetection();
             bodypart.confidence = poseKeypoints[bodypart_id + 2];
 
