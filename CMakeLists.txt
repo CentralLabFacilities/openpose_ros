@@ -14,6 +14,7 @@ find_package(catkin REQUIRED
   sensor_msgs
   geometry_msgs
   cv_bridge
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -183,11 +184,9 @@ install(TARGETS detect_people_server
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY launch
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+ )
 
 #############
 ## Testing ##

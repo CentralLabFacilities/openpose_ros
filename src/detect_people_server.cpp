@@ -18,6 +18,7 @@
 #include <geometry_msgs/Point.h>
 
 #include <cv_bridge/cv_bridge.h>
+#include <tf/transform_listener.h>
 
 #include <openpose_ros/DetectPeople.h>
 #include <openpose_ros/PersonDetection.h>
@@ -37,6 +38,7 @@ std::mutex imageMutex;
 std::mutex pointcloudMutex;
 bool visualize;
 sensor_msgs::PointCloud2 pointcloud;
+tf::StampedTransform transform;
 
 openpose_ros::BodyPartDetection initBodyPartDetection();
 openpose_ros::PersonDetection initPersonDetection();
@@ -128,9 +130,15 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             memcpy(&Y, &pointcloud.data[arrayPosY], sizeof(float));
             memcpy(&Z, &pointcloud.data[arrayPosZ], sizeof(float));
 
-            bodypart.pos.x = X;
-            bodypart.pos.y = Y;
-            bodypart.pos.z = Z;
+            tf::Transform baseToCam;
+            tf::Transform bodyPartTransform;
+            bodyPartTransform.setOrigin(tf::Vector3(X,Y,Z));
+
+            baseToCam.mult(bodyPartTransform,transform.inverse());
+
+            bodypart.pos.x = baseToCam.getOrigin().x();
+            bodypart.pos.y = baseToCam.getOrigin().x();
+            bodypart.pos.z = baseToCam.getOrigin().x();
 
             std::string bodypart_name = cocoBodyParts[j];
 
@@ -204,23 +212,45 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "detect_people_server");
 	
 	ros::NodeHandle localNH("~");
-    //init openpose
-    netInputSize = op::Point<int>(320,160);
-    netOutputSize = op::Point<int>(320,160);
-    outputSize = op::Point<int>(640,480);
-    scaleNumber = 1;
-    scaleGap = 0.3;
+
+    //read in params
+    int netInputSizeWidth;
+    ros::param::param("net_input_size_width", netInputSizeWidth, 320);
+    int netInputSizeHeight;
+    ros::param::param("net_input_size_height", netInputSizeHeight, 160);
+    netInputSize = op::Point<int>(netInputSizeWidth,netInputSizeHeight);
+
+    int netOutputSizeWidth;
+    ros::param::param("net_output_size_width", netOutputSizeWidth, 320);
+    int netOutputSizeHeight;
+    ros::param::param("net_output_size_height", netOutputSizeHeight, 160);
+    netOutputSize = op::Point<int>(netOutputSizeWidth,netOutputSizeHeight);
+
+    int outputSizeWidth;
+    ros::param::param("output_size_width", outputSizeWidth, 640);
+    int outputSizeHeight;
+    ros::param::param("output_size_height", outputSizeHeight, 480);
+    outputSize = op::Point<int>(outputSizeWidth,outputSizeHeight);
+
+    ros::param::param("scale_number", scaleNumber, 1);
+    ros::param::param("scale_gap", scaleGap, 0.3);
+
     poseModel = op::PoseModel::COCO_18;
-    std::string modelsFolder = "/vol/robocup/nightly/share/openpose/models/";
-    //localNH.getParam("model_folder", modelsFolder&)
-    int gpuId = 0;
+
+    std::string modelsFolder;
+    ros::param::param("models_folder", modelsFolder, std::string("/vol/robocup/nightly/share/openpose/models/"));
+
+    int gpuId;
+    ros::param::param("gpu_id", gpuId, 0);
+
     cocoBodyParts = op::POSE_COCO_BODY_PARTS;
 
+    ros::param::param("visualize", visualize, false);
+
+    //init openpose
     poseExtractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(netInputSize, netOutputSize,
                         outputSize, scaleNumber, poseModel, modelsFolder, gpuId));
     poseExtractor->initializationOnThread();
-
-    visualize = true;
 
     ros::NodeHandle n;
     //advertise service to get detected people poses
@@ -229,6 +259,23 @@ int main(int argc, char **argv)
     ros::Subscriber imageSub = n.subscribe("/xtion/rgb/image_raw", 100, imageCb);
     //subscriber to recieve pointcloud
     ros::Subscriber pointcloudSub = n.subscribe("/xtion/depth/points", 100, pointcloudCb);
+
+    //create tf listener to transform positions of detected into robot coordinates
+    tf::TransformListener listener;
+
+    std::string cameraFrame;
+    ros::param::param("camera_frame", cameraFrame, std::string("xtion_rgb_optical_frame"));
+    std::string base_frame;
+    ros::param::param("base_frame", base_frame, std::string("base_link"));
+
+    try {
+        listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
+        ROS_INFO("Got TF");
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("Could not get transform from camera frame to base frame: %s",ex.what());
+        return 1;
+    }
 
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
