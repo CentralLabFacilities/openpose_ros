@@ -15,11 +15,11 @@
     <param name="gpu_id" value="0" />
     <param name="visualize" value="true" />
 
-    <param name="camera_frame" value="xtion_rgb_optical_frame" />
+    <param name="camera_frame" value="xtionupper_rgb_optical_frame" />
     <param name="base_frame" value="base_link" />
 
     <node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
-	<remap from="/xtion/rgb/image_raw" to="/xtion/rgb/image_raw"/>
-	<remap from="/xtion/depth/points" to="/xtion/depth/points"/>
+	<remap from="/xtion/rgb/image_raw" to="/xtionupper/rgb/image_raw"/>
+	<remap from="/xtion/depth/points" to="/xtionupper/depth/points"/>
     </node>
 </launch>
