@@ -270,7 +270,7 @@ int main(int argc, char **argv)
     tf::TransformListener listener;
 
     std::string cameraFrame;
-    ros::param::param("camera_frame", cameraFrame, std::string("xtion_rgb_optical_frame"));
+    ros::param::param("camera_frame", cameraFrame, std::string("xtionupper_rgb_optical_frame"));
     std::string base_frame;
     ros::param::param("base_frame", base_frame, std::string("base_link"));
 
