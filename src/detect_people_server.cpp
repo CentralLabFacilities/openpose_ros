@@ -58,6 +58,7 @@ void imageCb(const sensor_msgs::ImageConstPtr& msg)
   imageMutex.lock();
   inputImage = cvBridge->image;
   if(visualize){
+    ROS_INFO("Showing Image");
     cv::imshow("input",inputImage);
     cv::waitKey(3);
   }
@@ -113,6 +114,9 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             //for conversion method
             int u = poseKeypoints[bodypart_id];
             int v = poseKeypoints[bodypart_id + 1];
+
+            bodypart.u = 0;
+            bodypart.v = 0;
 
             ROS_INFO("u: %d, v: %d",u,v);
 
@@ -209,6 +213,8 @@ openpose_ros::BodyPartDetection initBodyPartDetection() {
     bodypart.pos.x = 0.0;
     bodypart.pos.y = 0.0;
     bodypart.pos.z = 0.0;
+    bodypart.u = 0;
+    bodypart.v = 0;
     bodypart.confidence = 0;
     return bodypart;
 }
@@ -251,7 +257,7 @@ int main(int argc, char **argv)
 
     cocoBodyParts = op::POSE_COCO_BODY_PARTS;
 
-    ros::param::param("visualize", visualize, false);
+    ros::param::param("visualize", visualize, true);
 
     //init openpose
     poseExtractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(netInputSize, netOutputSize,
