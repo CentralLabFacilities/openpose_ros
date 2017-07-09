@@ -115,8 +115,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             int u = poseKeypoints[bodypart_id];
             int v = poseKeypoints[bodypart_id + 1];
 
-            bodypart.u = 0;
-            bodypart.v = 0;
+            bodypart.u = u;
+            bodypart.v = v;
 
             ROS_INFO("u: %d, v: %d",u,v);
 
