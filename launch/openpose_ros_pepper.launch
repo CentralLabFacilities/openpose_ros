@@ -1,0 +1,19 @@
+<launch>
+	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
+		<remap from="/xtion/rgb/image_raw" to="/pepper_robot/camera/front/camera/image_raw"/>
+		<remap from="/xtion/depth/points" to="/pepper_robot/camera/depth/points"/>
+		<param name="net_input_size_width" value="320" />
+		<param name="net_input_size_height" value="160" />
+		<param name="net_output_size_width" value="320" />
+		<param name="net_output_size_height" value="160" />
+		<param name="output_size_width" value="640" />
+		<param name="output_size_height" value="480" />
+		<param name="scale_number" value="1" />
+		<param name="scale_gap" value="0.3" />
+		<param name="models_folder" value="/vol/pepper/systems/pepper-robocup-nightly/share/openpose/models/" />
+		<param name="gpu_id" value="0" />
+		<param name="visualize" value="true" />
+		<param name="camera_frame" value="CameraDepth_frame" />
+		<param name="base_frame" value="base_footprint" />
+    </node>
+</launch>
