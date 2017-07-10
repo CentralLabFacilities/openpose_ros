@@ -227,37 +227,37 @@ int main(int argc, char **argv)
 
     //read in params
     int netInputSizeWidth;
-    netInputSizeWidth = ros::param::param("net_input_size_width", 320);
+    localNH.param("net_input_size_width", netInputSizeWidth, 320);
     int netInputSizeHeight;
-    netInputSizeHeight = ros::param::param("net_input_size_height", 160);
+    localNH.param("net_input_size_height", netInputSizeHeight, 160);
     netInputSize = op::Point<int>(netInputSizeWidth,netInputSizeHeight);
 
     int netOutputSizeWidth;
-    netOutputSizeWidth = ros::param::param("net_output_size_width", 320);
+    localNH.param("net_output_size_width", netOutputSizeWidth, 320);
     int netOutputSizeHeight;
-    netOutputSizeHeight = ros::param::param("net_output_size_height", 160);
+    localNH.param("net_output_size_height", netOutputSizeHeight, 160);
     netOutputSize = op::Point<int>(netOutputSizeWidth,netOutputSizeHeight);
 
     int outputSizeWidth;
-    outputSizeWidth = ros::param::param("output_size_width", 640);
+    localNH.param("output_size_width", outputSizeWidth, 640);
     int outputSizeHeight;
-    outputSizeHeight = ros::param::param("output_size_height", 480);
+    localNH.param("output_size_height", outputSizeHeight, 480);
     outputSize = op::Point<int>(outputSizeWidth,outputSizeHeight);
 
-    scaleNumber = ros::param::param("scale_number", 1);
-    scaleGap = ros::param::param("scale_gap", 0.3);
+    localNH.param("scale_number", scaleNumber, 1);
+    localNH.param("scale_gap", scaleGap, 0.3);
 
     poseModel = op::PoseModel::COCO_18;
 
     std::string modelsFolder;
-    modelsFolder = ros::param::param("models_folder", std::string("/vol/robocup/nightly/share/openpose/models/"));
+    localNH.param("models_folder", modelsFolder, std::string("/vol/robocup/nightly/share/openpose/models/"));
 
     int gpuId;
-    gpuId = ros::param::param("gpu_id", 0);
+    localNH.param("gpu_id", gpuId, 0);
 
     cocoBodyParts = op::POSE_COCO_BODY_PARTS;
 
-    visualize = ros::param::param("visualize", true);
+    localNH.param("visualize", visualize, true);
 
     //init openpose
     poseExtractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(netInputSize, netOutputSize,
@@ -276,9 +276,9 @@ int main(int argc, char **argv)
     tf::TransformListener listener;
 
     std::string cameraFrame;
-    cameraFrame = ros::param::param("camera_frame", std::string("xtionupper_rgb_optical_frame"));
+    localNH.param("camera_frame", cameraFrame, std::string("xtionupper_rgb_optical_frame"));
     std::string base_frame;
-    base_frame = ros::param::param("base_frame", std::string("base_link"));
+    localNH.param("base_frame", base_frame, std::string("base_link"));
 
     try {
         listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0) );
