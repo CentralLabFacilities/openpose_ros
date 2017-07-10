@@ -82,7 +82,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
     pointcloudMutex.lock();
     ROS_INFO("Im cols %d, im rows %d", inputImage.cols, inputImage.rows);
     std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImage);
-    ROS_INFO("Detect poses using forward pass.");
+    ROS_INFO("Detect poseys using forward pass.");
     poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
     const auto poseKeypoints = poseExtractor->getPoseKeypoints();
 
@@ -227,37 +227,37 @@ int main(int argc, char **argv)
 
     //read in params
     int netInputSizeWidth;
-    ros::param::param("net_input_size_width", netInputSizeWidth, 320);
+    netInputSizeWidth = ros::param::param("net_input_size_width", 320);
     int netInputSizeHeight;
-    ros::param::param("net_input_size_height", netInputSizeHeight, 160);
+    netInputSizeHeight = ros::param::param("net_input_size_height", 160);
     netInputSize = op::Point<int>(netInputSizeWidth,netInputSizeHeight);
 
     int netOutputSizeWidth;
-    ros::param::param("net_output_size_width", netOutputSizeWidth, 320);
+    netOutputSizeWidth = ros::param::param("net_output_size_width", 320);
     int netOutputSizeHeight;
-    ros::param::param("net_output_size_height", netOutputSizeHeight, 160);
+    netOutputSizeHeight = ros::param::param("net_output_size_height", 160);
     netOutputSize = op::Point<int>(netOutputSizeWidth,netOutputSizeHeight);
 
     int outputSizeWidth;
-    ros::param::param("output_size_width", outputSizeWidth, 640);
+    outputSizeWidth = ros::param::param("output_size_width", 640);
     int outputSizeHeight;
-    ros::param::param("output_size_height", outputSizeHeight, 480);
+    outputSizeHeight = ros::param::param("output_size_height", 480);
     outputSize = op::Point<int>(outputSizeWidth,outputSizeHeight);
 
-    ros::param::param("scale_number", scaleNumber, 1);
-    ros::param::param("scale_gap", scaleGap, 0.3);
+    scaleNumber = ros::param::param("scale_number", 1);
+    scaleGap = ros::param::param("scale_gap", 0.3);
 
     poseModel = op::PoseModel::COCO_18;
 
     std::string modelsFolder;
-    ros::param::param("models_folder", modelsFolder, std::string("/vol/robocup/nightly/share/openpose/models/"));
+    modelsFolder = ros::param::param("models_folder", std::string("/vol/robocup/nightly/share/openpose/models/"));
 
     int gpuId;
-    ros::param::param("gpu_id", gpuId, 0);
+    gpuId = ros::param::param("gpu_id", 0);
 
     cocoBodyParts = op::POSE_COCO_BODY_PARTS;
 
-    ros::param::param("visualize", visualize, true);
+    visualize = ros::param::param("visualize", true);
 
     //init openpose
     poseExtractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(netInputSize, netOutputSize,
@@ -276,9 +276,9 @@ int main(int argc, char **argv)
     tf::TransformListener listener;
 
     std::string cameraFrame;
-    ros::param::param("camera_frame", cameraFrame, std::string("xtionupper_rgb_optical_frame"));
+    cameraFrame = ros::param::param("camera_frame", std::string("xtionupper_rgb_optical_frame"));
     std::string base_frame;
-    ros::param::param("base_frame", base_frame, std::string("base_link"));
+    base_frame = ros::param::param("base_frame", std::string("base_link"));
 
     try {
         listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0) );
