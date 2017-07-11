@@ -13,7 +13,7 @@
 		<param name="models_folder" value="/vol/pepper/systems/pepper-robocup-nightly/share/openpose/models/" />
 		<param name="gpu_id" value="0" />
 		<param name="visualize" value="true" />
-		<param name="camera_frame" value="CameraDepth_frame" />
+		<param name="camera_frame" value="CameraDepth_optical_frame" />
 		<param name="base_frame" value="base_footprint" />
     </node>
 </launch>
