@@ -1,6 +1,6 @@
 <launch>
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
-		<remap from="/xtion/rgb/image_raw" to="/pepper_robot/camera/front/camera/image_raw"/>
+		<remap from="/xtion/rgb/image_raw" to="/pepper_robot/sink/front/image_raw"/>
 		<remap from="/xtion/depth/points" to="/pepper_robot/camera/depth/points"/>
 		<param name="net_input_size_width" value="320" />
 		<param name="net_input_size_height" value="160" />
