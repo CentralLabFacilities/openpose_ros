@@ -1,4 +1,5 @@
 #define USE_CAFFE
+
 #include "ros/ros.h"
 
 #include <openpose/pose/poseExtractor.hpp>
@@ -23,10 +24,11 @@
 #include <openpose_ros/DetectPeople.h>
 #include <openpose_ros/PersonDetection.h>
 #include <openpose_ros/BodyPartDetection.h>
+//robert #include "Math.h"
 
 
-std::shared_ptr<op::PoseExtractor> poseExtractor;
-op::PoseModel  poseModel;
+std::shared_ptr <op::PoseExtractor> poseExtractor;
+op::PoseModel poseModel;
 op::Point<int> netInputSize;
 op::Point<int> netOutputSize;
 op::Point<int> outputSize;
@@ -41,42 +43,39 @@ sensor_msgs::PointCloud2 pointcloud;
 tf::StampedTransform transform;
 
 openpose_ros::BodyPartDetection initBodyPartDetection();
+
 openpose_ros::PersonDetection initPersonDetection();
 
-void imageCb(const sensor_msgs::ImageConstPtr& msg)
-{
-  cv_bridge::CvImagePtr cvBridge;
-  try
-  {
-    cvBridge = cv_bridge::toCvCopy(msg,sensor_msgs::image_encodings::BGR8);
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
-    return;
-  }
-  imageMutex.lock();
-  inputImage = cvBridge->image;
-  if(visualize){
-    ROS_INFO("Showing Image");
-    cv::imshow("input",inputImage);
-    cv::waitKey(3);
-  }
-  imageMutex.unlock();
+void imageCb(const sensor_msgs::ImageConstPtr &msg) {
+    cv_bridge::CvImagePtr cvBridge;
+    try {
+        cvBridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception &e) {
+        ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
+        return;
+    }
+    imageMutex.lock();
+    inputImage = cvBridge->image;
+    if (visualize) {
+        ROS_INFO("Showing Image");
+        cv::imshow("input", inputImage);
+        cv::waitKey(3);
+    }
+    imageMutex.unlock();
 }
 
-void pointcloudCb(const sensor_msgs::PointCloud2 pCloud){
+void pointcloudCb(const sensor_msgs::PointCloud2 pCloud) {
     pointcloudMutex.lock();
     pointcloud = pCloud;
     pointcloudMutex.unlock();
 }
 
-bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::DetectPeople::Response& res)
-{
+bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::DetectPeople::Response &res) {
     ROS_INFO("Called detect people service.");
     op::Array<float> netInputArray;
     std::vector<float> scaleRatios;
-    op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float)scaleGap};
+    op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
     ROS_INFO("Converting cv image to openpose array.");
     imageMutex.lock();
     pointcloudMutex.lock();
@@ -86,8 +85,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
     poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
     const auto poseKeypoints = poseExtractor->getPoseKeypoints();
 
-    if(visualize){
-        op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float)0.6};
+    if (visualize) {
+        op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
         op::OpOutputToCvMat opOutputToCvMat{outputSize};
         double scaleInputToOutput;
         op::Array<float> outputArray;
@@ -96,17 +95,17 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
         poseRenderer.renderPose(outputArray, poseKeypoints);
         auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
 
-        cv::imshow("Detections",outputImage);
+        cv::imshow("Detections", outputImage);
         cv::waitKey(3);
     }
 
-    ROS_INFO("Extracted %d people.",poseKeypoints.getSize(0));
-    for(size_t i = 0; i<poseKeypoints.getSize(0); ++i) {
+    ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
+    for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
 
         openpose_ros::PersonDetection person = initPersonDetection();
-        for(size_t j = 0; j<poseKeypoints.getSize(1); ++j) {
+        for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
 
-            size_t bodypart_id = 3*(i*poseKeypoints.getSize(1) + j);
+            size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
             openpose_ros::BodyPartDetection bodypart = initBodyPartDetection();
             bodypart.confidence = poseKeypoints[bodypart_id + 2];
 
@@ -118,12 +117,12 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             bodypart.u = u;
             bodypart.v = v;
 
-            ROS_INFO("u: %d, v: %d",u,v);
+            ROS_INFO("u: %d, v: %d", u, v);
 
             int pcWidth = pointcloud.width;
             int pcHeight = pointcloud.height;
 
-            int arrayPosition = v*pointcloud.row_step + u*pointcloud.point_step;
+            int arrayPosition = v * pointcloud.row_step + u * pointcloud.point_step;
             int arrayPosX = arrayPosition + pointcloud.fields[0].offset; // X has an offset of 0
             int arrayPosY = arrayPosition + pointcloud.fields[1].offset; // Y has an offset of 4
             int arrayPosZ = arrayPosition + pointcloud.fields[2].offset; // Z has an offset of 8
@@ -136,14 +135,14 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             memcpy(&Y, &pointcloud.data[arrayPosY], sizeof(float));
             memcpy(&Z, &pointcloud.data[arrayPosZ], sizeof(float));
 
-            ROS_INFO("X: %f, Y: %f, Z: %f",X,Y,Z);
+            ROS_INFO("X: %f, Y: %f, Z: %f", X, Y, Z);
 
             tf::Transform baseToCam;
             tf::Transform bodyPartTransform;
-            bodyPartTransform.setOrigin(tf::Vector3(X,Y,Z));
-            bodyPartTransform.setRotation(tf::Quaternion(0,0,0,1));
+            bodyPartTransform.setOrigin(tf::Vector3(X, Y, Z));
+            bodyPartTransform.setRotation(tf::Quaternion(0, 0, 0, 1));
 
-            baseToCam.mult(transform.inverse(),bodyPartTransform);
+            baseToCam.mult(transform.inverse(), bodyPartTransform);
 
             bodypart.pos.x = baseToCam.getOrigin().x();
             bodypart.pos.y = baseToCam.getOrigin().y();
@@ -172,11 +171,16 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request& req, openpose_ros::Dete
             else if (bodypart_name == "REar") person.REar = bodypart;
             else if (bodypart_name == "LEar") person.LEar = bodypart;
             else if (bodypart_name == "Chest") person.Chest = bodypart;
-            else
-            {
-              ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?", bodypart_name.c_str());
+            else {
+                ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
+                          bodypart_name.c_str());
             }
         }
+        //robert int xL, xH, yL, yH;
+        //robert getHeadBounds(person, xL, xH, yL, yH);
+
+        //robert gender_and_age::GenderAndAgeService srv;
+        //robert srv.request.
         res.people_list.push_back(person);
     }
     imageMutex.unlock();
@@ -208,6 +212,18 @@ openpose_ros::PersonDetection initPersonDetection() {
     return person;
 }
 
+/*robert
+openpose_ros::PersonDetection getHeadBounds(openpose_ros::PersonDetection person, int &xlow, int &xhigh, int &ylow, int &yhigh){
+    int amount = ceil(person.Nose.confidence) + ceil(person.REar.confidence) + ceil(person.REye.confidence) + ceil(person.LEar.confidence) + ceil(person.LEye.confidence);
+    float u = person.Nose.u + person.REar.u + person.REye.u + person.LEar.u + person.LEye.u;
+    float v = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
+    u /= amount;
+    v /= amount;
+    // u and v are now the center of the head.
+
+
+}*/
+
 openpose_ros::BodyPartDetection initBodyPartDetection() {
     openpose_ros::BodyPartDetection bodypart;
     bodypart.pos.x = 0.0;
@@ -219,30 +235,29 @@ openpose_ros::BodyPartDetection initBodyPartDetection() {
     return bodypart;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     ros::init(argc, argv, "detect_people_server");
-	
-	ros::NodeHandle localNH("~");
+
+    ros::NodeHandle localNH("~");
 
     //read in params
     int netInputSizeWidth;
     localNH.param("net_input_size_width", netInputSizeWidth, 320);
     int netInputSizeHeight;
     localNH.param("net_input_size_height", netInputSizeHeight, 160);
-    netInputSize = op::Point<int>(netInputSizeWidth,netInputSizeHeight);
+    netInputSize = op::Point<int>(netInputSizeWidth, netInputSizeHeight);
 
     int netOutputSizeWidth;
     localNH.param("net_output_size_width", netOutputSizeWidth, 320);
     int netOutputSizeHeight;
     localNH.param("net_output_size_height", netOutputSizeHeight, 160);
-    netOutputSize = op::Point<int>(netOutputSizeWidth,netOutputSizeHeight);
+    netOutputSize = op::Point<int>(netOutputSizeWidth, netOutputSizeHeight);
 
     int outputSizeWidth;
     localNH.param("output_size_width", outputSizeWidth, 640);
     int outputSizeHeight;
     localNH.param("output_size_height", outputSizeHeight, 480);
-    outputSize = op::Point<int>(outputSizeWidth,outputSizeHeight);
+    outputSize = op::Point<int>(outputSizeWidth, outputSizeHeight);
 
     localNH.param("scale_number", scaleNumber, 1);
     localNH.param("scale_gap", scaleGap, 0.3);
@@ -261,7 +276,8 @@ int main(int argc, char **argv)
 
     //init openpose
     poseExtractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(netInputSize, netOutputSize,
-                        outputSize, scaleNumber, poseModel, modelsFolder, gpuId));
+                                                                                       outputSize, scaleNumber,
+                                                                                       poseModel, modelsFolder, gpuId));
     poseExtractor->initializationOnThread();
 
     ros::NodeHandle n;
@@ -271,6 +287,8 @@ int main(int argc, char **argv)
     ros::Subscriber imageSub = n.subscribe("/xtion/rgb/image_raw", 100, imageCb);
     //subscriber to recieve pointcloud
     ros::Subscriber pointcloudSub = n.subscribe("/xtion/depth/points", 100, pointcloudCb);
+    //rosservice for age and gender detection
+    //robert ros::ServiceClient faceClient = n.serviceClient<gender_and_age::GenderAndAgeService>("gender_and_age_detection");
 
     //create tf listener to transform positions of detected into robot coordinates
     tf::TransformListener listener;
@@ -281,11 +299,11 @@ int main(int argc, char **argv)
     localNH.param("base_frame", base_frame, std::string("base_link"));
 
     try {
-        listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0) );
+        listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0));
         listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
-        ROS_INFO("Got TF: %f %f %f",transform.getOrigin().x(),transform.getOrigin().y(),transform.getOrigin().z());
+        ROS_INFO("Got TF: %f %f %f", transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
     } catch (tf::TransformException ex) {
-        ROS_ERROR("Could not get transform from camera frame to base frame: %s",ex.what());
+        ROS_ERROR("Could not get transform from camera frame to base frame: %s", ex.what());
         return 1;
     }
 
