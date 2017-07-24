@@ -24,8 +24,9 @@
 #include <openpose_ros/DetectPeople.h>
 #include <openpose_ros/PersonDetection.h>
 #include <openpose_ros/BodyPartDetection.h>
-//robert #include "Math.h"
+#include <algorithm>
 
+#include <gender_and_age/GenderAndAgeService.h>
 
 std::shared_ptr <op::PoseExtractor> poseExtractor;
 op::PoseModel poseModel;
@@ -42,9 +43,15 @@ bool visualize;
 sensor_msgs::PointCloud2 pointcloud;
 tf::StampedTransform transform;
 
+bool gender_age = false;
+
+boost::shared_ptr<ros::ServiceClient> face_client_ptr;
+
 openpose_ros::BodyPartDetection initBodyPartDetection();
 
 openpose_ros::PersonDetection initPersonDetection();
+
+void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 
 void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     cv_bridge::CvImagePtr cvBridge;
@@ -58,7 +65,6 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     imageMutex.lock();
     inputImage = cvBridge->image;
     if (visualize) {
-        ROS_INFO("Showing Image");
         cv::imshow("input", inputImage);
         cv::waitKey(3);
     }
@@ -98,6 +104,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
         cv::imshow("Detections", outputImage);
         cv::waitKey(3);
     }
+
+    gender_and_age::GenderAndAgeService srv;
 
     ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
     for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
@@ -151,6 +159,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             std::string bodypart_name = cocoBodyParts[j];
 
             ROS_INFO("BodyPartName: %s", bodypart_name.c_str());
+            ROS_INFO("Confidence: %f", bodypart.confidence);
 
             if (bodypart_name == "Nose") person.Nose = bodypart;
             else if (bodypart_name == "Neck") person.Neck = bodypart;
@@ -176,13 +185,38 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
                           bodypart_name.c_str());
             }
         }
-        //robert int xL, xH, yL, yH;
-        //robert getHeadBounds(person, xL, xH, yL, yH);
+        if(gender_age) {
 
-        //robert gender_and_age::GenderAndAgeService srv;
-        //robert srv.request.
+            printf ("Gender and age is ON");
+            int crop_x, crop_y, crop_width, crop_height;
+            getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, inputImage);
+
+            cv::Rect roi;
+            roi.x = crop_x;
+            roi.y = crop_y;
+            roi.width = crop_width;
+            roi.height = crop_height;
+            cv::Mat crop = inputImage(roi);
+            cv::imshow("crop", crop);
+            sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+
+            srv.request.objects.push_back(*inputImage_msg);
+
+        }
         res.people_list.push_back(person);
     }
+    if(gender_age) {
+        face_client_ptr.get()->call(srv);
+    }
+    //ROS_INFO("gasize: %u",srv.response.gender_and_age_response.gender_and_age_list.size());
+    //ROS_INFO("personsize: %u",res.people_list.size());
+    for (size_t i = 0; i < res.people_list.size(); ++i) {
+        res.people_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+        res.people_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+
+
+    }
+
     imageMutex.unlock();
     pointcloudMutex.unlock();
     return true;
@@ -212,17 +246,48 @@ openpose_ros::PersonDetection initPersonDetection() {
     return person;
 }
 
-/*robert
-openpose_ros::PersonDetection getHeadBounds(openpose_ros::PersonDetection person, int &xlow, int &xhigh, int &ylow, int &yhigh){
+//robert
+void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
+    printf ("getHeadBounds()");
     int amount = ceil(person.Nose.confidence) + ceil(person.REar.confidence) + ceil(person.REye.confidence) + ceil(person.LEar.confidence) + ceil(person.LEye.confidence);
-    float u = person.Nose.u + person.REar.u + person.REye.u + person.LEar.u + person.LEye.u;
-    float v = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
-    u /= amount;
-    v /= amount;
+    float uf = person.Nose.u + person.REar.u + person.REye.u + person.LEar.u + person.LEye.u;
+    float vf = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
+
+    if (amount <= 1)    {
+        x = y = width = height = 1;
+        return;
+    }
+    int u = floor(uf / amount);
+    int v = floor(vf / amount);
+    printf ("u: %d", u);
+    printf ("v: %d", v);
     // u and v are now the center of the head.
 
+    std::list<int> distlist_x;
+    std::list<int> distlist_y;
+    if (person.Nose.u != 0) {distlist_x.push_back(std::abs(person.Nose.u - u));}
+    if (person.REar.u != 0) {distlist_x.push_back(std::abs(person.REar.u - u));}
+    if (person.REye.u != 0) {distlist_x.push_back(std::abs(person.REye.u - u));}
+    if (person.LEar.u != 0) {distlist_x.push_back(std::abs(person.LEar.u - u));}
+    if (person.LEye.u != 0) {distlist_x.push_back(std::abs(person.LEye.u - u));}
+    int max_dist_u = *std::max_element(distlist_x.begin(),distlist_x.end());
+    printf ("max_dist_u: %d", max_dist_u);
+    x = std::max(u - max_dist_u, 0);
+    y = std::max(v - (int)ceil(max_dist_u*1.5), 0);
+    printf ("x: %d", x);
+    printf ("y: %d", y);
+    width = max_dist_u*2;
+    height = max_dist_u*3;
+    printf ("width: %d", width);
+    printf ("height: %d", height);
 
-}*/
+    if (image.size().width <= (x+width)) {
+        width -= (x+width - image.size().width);
+    }
+    if (image.size().height <= (y+height)) {
+        height -= (y+height - image.size().height);
+    }
+}
 
 openpose_ros::BodyPartDetection initBodyPartDetection() {
     openpose_ros::BodyPartDetection bodypart;
@@ -288,7 +353,12 @@ int main(int argc, char **argv) {
     //subscriber to recieve pointcloud
     ros::Subscriber pointcloudSub = n.subscribe("/xtion/depth/points", 100, pointcloudCb);
     //rosservice for age and gender detection
-    //robert ros::ServiceClient faceClient = n.serviceClient<gender_and_age::GenderAndAgeService>("gender_and_age_detection");
+    if(ros::service::exists("gender_and_age",false)) {
+        ROS_INFO("gender and age classify service exists.");
+        gender_age = true;
+        face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age::GenderAndAgeService>("gender_and_age")));
+    }
+    
 
     //create tf listener to transform positions of detected into robot coordinates
     tf::TransformListener listener;
@@ -309,6 +379,8 @@ int main(int argc, char **argv) {
 
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
+	
+	//ros::MultiThreadedSpinner().spin();
 
     return 0;
 }

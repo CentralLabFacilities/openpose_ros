@@ -17,3 +17,5 @@ BodyPartDetection LEye
 BodyPartDetection REar
 BodyPartDetection LEar
 BodyPartDetection Chest
+gender_and_age/GenderProbability gender_hyp
+gender_and_age/AgeProbability age_hyp
