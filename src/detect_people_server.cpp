@@ -108,6 +108,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
     gender_and_age::GenderAndAgeService srv;
 
     ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
+    ROS_INFO("before first loop");
     for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
 
         openpose_ros::PersonDetection person = initPersonDetection();
@@ -182,9 +183,12 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             else if (bodypart_name == "Chest") person.Chest = bodypart;
             else {
                 ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
-                          bodypart_name.c_str());
+                bodypart_name.c_str());
+		printf ("end inner for-loop");
             }
+	    printf ("end outer for-loop");
         }
+	printf ("before if(gender_age) 1");
         if(gender_age) {
 
             printf ("Gender and age is ON");
@@ -205,17 +209,20 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
         }
         res.people_list.push_back(person);
     }
+    printf("before if(gender_age) 2");
     if(gender_age) {
         face_client_ptr.get()->call(srv);
-    }
-    //ROS_INFO("gasize: %u",srv.response.gender_and_age_response.gender_and_age_list.size());
-    //ROS_INFO("personsize: %u",res.people_list.size());
-    for (size_t i = 0; i < res.people_list.size(); ++i) {
-        res.people_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
-        res.people_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+	//ROS_INFO("gasize: %u",srv.response.gender_and_age_response.gender_and_age_list.size());
+    	//ROS_INFO("personsize: %u",res.people_list.size());
+    	for (size_t i = 0; i < res.people_list.size(); ++i) {
+        	res.people_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+        	res.people_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
 
 
+    	}
     }
+    printf("after loops");
+    
 
     imageMutex.unlock();
     pointcloudMutex.unlock();
