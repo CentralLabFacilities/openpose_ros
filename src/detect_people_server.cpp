@@ -201,7 +201,6 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             roi.width = crop_width;
             roi.height = crop_height;
             cv::Mat crop = inputImage(roi);
-            cv::imshow("crop", crop);
             sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
 
             srv.request.objects.push_back(*inputImage_msg);
