@@ -108,7 +108,6 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
     gender_and_age::GenderAndAgeService srv;
 
     ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
-    ROS_INFO("before first loop");
     for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
 
         openpose_ros::PersonDetection person = initPersonDetection();
@@ -184,11 +183,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             else {
                 ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
                 bodypart_name.c_str());
-		printf ("end inner for-loop");
             }
-	    printf ("end outer for-loop");
         }
-	printf ("before if(gender_age) 1");
         if(gender_age) {
 
             printf ("Gender and age is ON");
@@ -202,13 +198,11 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             roi.height = crop_height;
             cv::Mat crop = inputImage(roi);
             sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
-
             srv.request.objects.push_back(*inputImage_msg);
 
         }
         res.people_list.push_back(person);
     }
-    printf("before if(gender_age) 2");
     if(gender_age) {
         face_client_ptr.get()->call(srv);
 	//ROS_INFO("gasize: %u",srv.response.gender_and_age_response.gender_and_age_list.size());
@@ -220,7 +214,6 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
 
     	}
     }
-    printf("after loops");
     
 
     imageMutex.unlock();
