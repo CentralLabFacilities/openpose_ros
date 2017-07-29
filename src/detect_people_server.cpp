@@ -28,6 +28,10 @@
 
 #include <gender_and_age/GenderAndAgeService.h>
 
+#include <cstdint>
+#include <opencv2/core/core.hpp>
+
+
 std::shared_ptr <op::PoseExtractor> poseExtractor;
 op::PoseModel poseModel;
 op::Point<int> netInputSize;
@@ -44,6 +48,7 @@ sensor_msgs::PointCloud2 pointcloud;
 tf::StampedTransform transform;
 
 bool gender_age = false;
+bool shirt_color = true;
 
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
 
@@ -52,6 +57,8 @@ openpose_ros::BodyPartDetection initBodyPartDetection();
 openpose_ros::PersonDetection initPersonDetection();
 
 void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
+
+std::string getShirtColor(openpose_ros::PersonDetection person, cv::Mat image);
 
 void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     cv_bridge::CvImagePtr cvBridge;
@@ -106,13 +113,13 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
     }
 
     gender_and_age::GenderAndAgeService srv;
+    // never use list, bitch!!!
+    std::vector<std::string> shirt_list;
 
     ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
     for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
-
         openpose_ros::PersonDetection person = initPersonDetection();
         for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
-
             size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
             openpose_ros::BodyPartDetection bodypart = initBodyPartDetection();
             bodypart.confidence = poseKeypoints[bodypart_id + 2];
@@ -144,7 +151,6 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             memcpy(&Z, &pointcloud.data[arrayPosZ], sizeof(float));
 
             ROS_INFO("X: %f, Y: %f, Z: %f", X, Y, Z);
-
             tf::Transform baseToCam;
             tf::Transform bodyPartTransform;
             bodyPartTransform.setOrigin(tf::Vector3(X, Y, Z));
@@ -184,6 +190,7 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
                 ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
                 bodypart_name.c_str());
             }
+
         }
         if(gender_age) {
 
@@ -201,6 +208,17 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
             srv.request.objects.push_back(*inputImage_msg);
 
         }
+	if(shirt_color) {
+		printf("Shirt detection is ON \n");
+		try{
+			shirt_list.push_back(getShirtColor(person, inputImage));
+		} catch (cv::Exception e) {
+			
+			std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
+		} 
+	}
+
+	
         res.people_list.push_back(person);
     }
     if(gender_age) {
@@ -214,10 +232,19 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
 
     	}
     }
-    
+    if(shirt_color) {
+    	for (int i = 0; i < shirt_list.size(); i++)	{
+		std::string shirtcolor = shirt_list[i];
+		ROS_INFO ("color person %d: %s, ", i, shirtcolor.c_str());
+		printf("\n");
+		
+		res.people_list.at(i).shirtcolor = shirtcolor;
+	}    
+    }
 
     imageMutex.unlock();
     pointcloudMutex.unlock();
+
     return true;
 }
 
@@ -245,7 +272,195 @@ openpose_ros::PersonDetection initPersonDetection() {
     return person;
 }
 
-//robert
+
+std::string getShirtColor(openpose_ros::PersonDetection person, cv::Mat image)	{
+	printf ("getShirtColor() \n");
+	cv::Rect roi;
+
+	int cropx, cropy, cropwidth, cropheight = 1;
+
+
+	if (person.RShoulder.confidence > 0 && person.LShoulder.confidence > 0) {
+		cropy = person.RShoulder.v;
+        	cropwidth = std::abs(person.LShoulder.u - person.RShoulder.u);
+		if ((person.RShoulder.u - person.LShoulder.u) < 0) {
+			cropx = person.RShoulder.u;
+		} else {
+			cropx = person.LShoulder.u;
+		}
+
+		if (person.RHip.confidence > 0)	{
+			cropheight = (person.RHip.v - cropy);
+		} else {
+			if (person.LHip.confidence > 0)	{
+				cropheight = (person.LHip.v - cropy);
+			} else {
+				printf("no hip found\n");
+				cropheight = cropwidth;
+			}
+		
+		}
+
+	} else {
+		if (person.RHip.confidence > 0 && person.LHip.confidence > 0)	{
+			if ((person.RShoulder.confidence > 0)^(person.LShoulder.confidence > 0)) {
+				cropwidth = std::abs(person.LHip.u - person.RHip.u);
+				cropy = person.LShoulder.v + person.RShoulder.v;
+				if ((person.RHip.u - person.LHip.u) < 0) {
+					cropx = person.RHip.u;
+					cropheight = person.RHip.v - person.LShoulder.u - person.RShoulder.u; // one of the shoulders values will be 0.
+				} else {
+					cropx = person.LHip.u;
+					cropheight = person.LHip.v - person.LShoulder.u - person.RShoulder.u;
+				}
+			} else {
+				cropwidth = std::abs(person.LHip.u - person.RHip.u);
+				if ((person.RHip.u - person.LHip.u) < 0) {
+					cropx = person.RHip.u;
+					cropheight = cropwidth;
+					cropy = person.RHip.v - cropheight;
+				} else {
+					cropx = person.LHip.u;
+					cropheight = cropwidth;
+					cropy = person.LHip.v - cropheight;
+				}
+			}
+		} else {
+			if (person.RHip.confidence > 0)	{
+				if (person.RShoulder.confidence > 0)	{
+					cropx = person.RShoulder.u;
+					cropy = person.RShoulder.v;
+					cropheight = std::abs(person.RShoulder.v - person.RHip.v);
+					cropwidth = cropheight * 0.5;
+				}
+				if (person.LShoulder.confidence > 0)	{
+					cropx = person.RHip.u;
+					cropy = person.LShoulder.v;
+					cropheight = std::abs(person.LShoulder.v - person.RHip.v);
+					cropwidth = std::abs(person.LShoulder.u - person.RHip.u);
+				}
+			}
+
+			if (person.LHip.confidence > 0)	{
+				if (person.RShoulder.confidence > 0)	{
+					cropx = person.RShoulder.u;
+					cropy = person.RShoulder.v;
+					cropheight = std::abs(person.RShoulder.v - person.LHip.v);
+					cropwidth = cropheight * 0.5;
+				}
+				if (person.LShoulder.confidence > 0)	{
+					cropy = person.LShoulder.v;
+					cropheight = std::abs(person.LShoulder.v - person.LHip.v);
+					cropwidth = cropheight*0.5;
+					cropx = person.LShoulder.u - cropwidth;
+				}
+			} else {
+				printf ("No BB possible: RShoulder.confidence %f, LShoulder.confidence %f, RHip.confidence %f, LHip.confidence %f \n", person.RShoulder.confidence, person.LShoulder.confidence, person.RHip.confidence, person.LHip.confidence);
+			}
+			
+		}
+	}
+
+
+	printf ("#1: person.RShoulder.v: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);	
+	printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
+
+
+	if (cropx + cropwidth >= image.size().width) { cropwidth = cropwidth - std::abs((cropx + cropwidth) - image.size().width); }
+	if (cropy + cropheight >= image.size().height) { cropheight = cropheight - std::abs((cropy + cropheight) - image.size().height); }
+
+	if ((cropwidth <= 0) || (cropheight <= 0) || (cropx <= 0) || (cropy <= 0))	{
+		printf("width or height <= 0");
+		cropx = cropy = cropwidth = cropheight = 1;
+	}
+
+	roi.x = cropx;
+	roi.y = cropy;
+	roi.width = cropwidth;
+	roi.height = cropheight;
+
+	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
+        cv::Mat crop_img = inputImage(roi); // todo: no hips or shoulders
+        cv::imshow("shirtColor", crop_img);
+
+	cv::waitKey(0);
+	//------HSV------
+	
+	cv::Mat hsv_crop_img;
+	cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
+	
+	std::vector<cv::Mat> hsv_planes;
+	cv::split(hsv_crop_img, hsv_planes);
+
+	cv::Mat h = hsv_planes[0]; // H channel
+    	cv::Mat s = hsv_planes[1]; // S channel
+    	cv::Mat v = hsv_planes[2]; // V channel
+
+
+	int red, orange, yellow, green, blue, purple, black, white, grey, pixel;
+	red = orange = yellow = green = blue = purple = black = white = grey = pixel = 0;
+
+	uchar h_pixel;
+	uchar s_pixel;
+	uchar v_pixel;
+	for(int i=0; i<hsv_crop_img.rows; i++)	{
+    		for(int j=0; j<hsv_crop_img.cols; j++)	{
+        		h_pixel = h.at<uchar>(i, j);
+			s_pixel = s.at<uchar>(i, j);
+			v_pixel = v.at<uchar>(i, j);
+
+			pixel++;
+			if (s_pixel >= 40)	{
+				if (((h_pixel >= 0) && (h_pixel <= 10)) || ((h_pixel <= 180 ) && (h_pixel >=165))) { red++;}
+				if ((h_pixel >= 7) && (h_pixel <= 22)) { orange++;  }
+				if ((h_pixel >= 15) && (h_pixel <= 45))	 { yellow++; }
+				if ((h_pixel >= 30) && (h_pixel <= 83))	 { green++; }
+				if ((h_pixel >= 75) && (h_pixel <= 135)) { blue++; }
+				if ((h_pixel >= 123) && (h_pixel <= 172)) { purple++; }
+
+			}
+			if (v_pixel <= 40)	{ black++;}
+			//if (v_pixel >= 60)	{ white++;}
+			if ((v_pixel >= 30) && (v_pixel <= 70)) { grey++;}
+		}
+	}
+	int color_array[9] = {red,orange,yellow,green,blue,purple,black,white,grey};	
+	
+/**
+	printf ("pixel: %d \n", pixel);
+	printf ("red: %d \n", color_array[0]);
+	printf ("orange: %d \n", color_array[1]);
+	printf ("yellow: %d \n", color_array[2]);
+	printf ("green: %d \n", color_array[3]);
+	printf ("blue: %d \n", color_array[4]);
+	printf ("purple: %d \n", color_array[5]);
+	printf ("black: %d \n", color_array[6]);
+	printf ("white: %d \n", color_array[7]);
+	printf ("grey: %d \n", color_array[8]); */
+	
+	int max_color = *std::max_element(color_array,color_array+9);
+	int dominant_color_index;
+	for(int k = 0; k < 8; k++)	{
+		if (max_color == color_array[k])	{dominant_color_index = k;}	
+	}
+	
+	switch(dominant_color_index) {
+    		case 0 : return "red";
+    		case 1 : return "orange";
+		case 2 : return "yellow";
+		case 3 : return "green";
+		case 4 : return "blue";
+		case 5 : return "purple";
+		case 6 : return "black";
+		case 7 : return "white";
+		case 8 : return "grey";
+	}
+
+	return "no color";
+}
+
+
+
 void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
     printf ("getHeadBounds()");
     int amount = ceil(person.Nose.confidence) + ceil(person.REar.confidence) + ceil(person.REye.confidence) + ceil(person.LEar.confidence) + ceil(person.LEye.confidence);
