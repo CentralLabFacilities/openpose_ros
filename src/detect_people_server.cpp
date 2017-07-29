@@ -381,9 +381,9 @@ std::string getShirtColor(openpose_ros::PersonDetection person, cv::Mat image)	{
 
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
         cv::Mat crop_img = inputImage(roi); // todo: no hips or shoulders
-        cv::imshow("shirtColor", crop_img);
+        //cv::imshow("shirtColor", crop_img);
 
-	cv::waitKey(0);
+	//cv::waitKey(0);
 	//------HSV------
 	
 	cv::Mat hsv_crop_img;
