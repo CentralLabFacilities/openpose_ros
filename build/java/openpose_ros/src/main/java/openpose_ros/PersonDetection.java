@@ -1,0 +1,44 @@
+package openpose_ros;
+
+public interface PersonDetection extends org.ros.internal.message.Message {
+  static final java.lang.String _TYPE = "openpose_ros/PersonDetection";
+  static final java.lang.String _DEFINITION = "BodyPartDetection Nose\nBodyPartDetection Neck\nBodyPartDetection RShoulder\nBodyPartDetection RElbow\nBodyPartDetection RWrist\nBodyPartDetection LShoulder\nBodyPartDetection LElbow\nBodyPartDetection LWrist\nBodyPartDetection RHip\nBodyPartDetection RKnee\nBodyPartDetection RAnkle\nBodyPartDetection LHip\nBodyPartDetection LKnee\nBodyPartDetection LAnkle\nBodyPartDetection REye\nBodyPartDetection LEye\nBodyPartDetection REar\nBodyPartDetection LEar\nBodyPartDetection Chest\n";
+  openpose_ros.BodyPartDetection getNose();
+  void setNose(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getNeck();
+  void setNeck(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getRShoulder();
+  void setRShoulder(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getRElbow();
+  void setRElbow(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getRWrist();
+  void setRWrist(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLShoulder();
+  void setLShoulder(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLElbow();
+  void setLElbow(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLWrist();
+  void setLWrist(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getRHip();
+  void setRHip(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getRKnee();
+  void setRKnee(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getRAnkle();
+  void setRAnkle(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLHip();
+  void setLHip(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLKnee();
+  void setLKnee(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLAnkle();
+  void setLAnkle(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getREye();
+  void setREye(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLEye();
+  void setLEye(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getREar();
+  void setREar(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getLEar();
+  void setLEar(openpose_ros.BodyPartDetection value);
+  openpose_ros.BodyPartDetection getChest();
+  void setChest(openpose_ros.BodyPartDetection value);
+}

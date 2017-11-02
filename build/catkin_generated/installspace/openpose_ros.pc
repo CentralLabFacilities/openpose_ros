@@ -1,0 +1,8 @@
+prefix=/vol/robocup/nightly
+
+Name: openpose_ros
+Description: Description of openpose_ros
+Version: 0.0.0
+Cflags: -I/vol/robocup/nightly/include
+Libs: -L/vol/robocup/nightly/lib 
+Requires: roscpp std_msgs sensor_msgs cv_bridge

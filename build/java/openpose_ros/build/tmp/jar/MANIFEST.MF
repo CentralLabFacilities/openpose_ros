@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Export-Package: openpose_ros;version="0.0.0";uses:="geometry_msgs,org.
+ ros.internal.message"
+Bundle-SymbolicName: org.ros.rosjava_messages.openpose_ros
+Bundle-Version: 0.0.0
+Bundle-Name: openpose_ros
+Bundle-ManifestVersion: 2
+Bnd-LastModified: 1498913211000
+Import-Package: geometry_msgs;version="[1.12,2)",org.ros.internal.mess
+ age
+Created-By: 1.8.0_131 (Oracle Corporation)
+Tool: Bnd-2.1.0.20130426-122213
+
