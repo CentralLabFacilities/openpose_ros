@@ -34,5 +34,5 @@
 # Build
 build/
 
-.*.txt.swp
-.*.txt.user
+.*.swp
+.*.user
