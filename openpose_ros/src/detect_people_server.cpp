@@ -21,12 +21,12 @@
 #include <cv_bridge/cv_bridge.h>
 #include <tf/transform_listener.h>
 
-#include <openpose_ros/DetectPeople.h>
-#include <openpose_ros/PersonDetection.h>
-#include <openpose_ros/BodyPartDetection.h>
+#include <openpose_ros_msgs/DetectPeople.h>
+#include <openpose_ros_msgs/PersonDetection.h>
+#include <openpose_ros_msgs/BodyPartDetection.h>
 #include <algorithm>
 
-#include <gender_and_age/GenderAndAgeService.h>
+#include <gender_and_age_msgs/GenderAndAgeService.h>
 
 #include <cstdint>
 #include <opencv2/core/core.hpp>
@@ -52,13 +52,13 @@ bool shirt_color = true;
 
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
 
-openpose_ros::BodyPartDetection initBodyPartDetection();
+openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 
-openpose_ros::PersonDetection initPersonDetection();
+openpose_ros_msgs::PersonDetection initPersonDetection();
 
-void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
+void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 
-std::string getShirtColor(openpose_ros::PersonDetection person, cv::Mat image);
+std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
 void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     cv_bridge::CvImagePtr cvBridge;
@@ -84,7 +84,7 @@ void pointcloudCb(const sensor_msgs::PointCloud2 pCloud) {
     pointcloudMutex.unlock();
 }
 
-bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::DetectPeople::Response &res) {
+bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_msgs::DetectPeople::Response &res) {
     ROS_INFO("Called detect people service.");
     op::Array<float> netInputArray;
     std::vector<float> scaleRatios;
@@ -112,16 +112,16 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
         cv::waitKey(3);
     }
 
-    gender_and_age::GenderAndAgeService srv;
+    gender_and_age_msgs::GenderAndAgeService srv;
     // never use list, bitch!!!
     std::vector<std::string> shirt_list;
 
     ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
     for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
-        openpose_ros::PersonDetection person = initPersonDetection();
+        openpose_ros_msgs::PersonDetection person = initPersonDetection();
         for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
             size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
-            openpose_ros::BodyPartDetection bodypart = initBodyPartDetection();
+            openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
             bodypart.confidence = poseKeypoints[bodypart_id + 2];
 
             //credit to Saurav Agarwal (http://sauravag.com/2016/11/how-to-get-depth-xyz-of-a-2d-pixel-from-pointcloud2-or-kinect-data/)
@@ -248,8 +248,8 @@ bool detectPeopleCb(openpose_ros::DetectPeople::Request &req, openpose_ros::Dete
     return true;
 }
 
-openpose_ros::PersonDetection initPersonDetection() {
-    openpose_ros::PersonDetection person;
+openpose_ros_msgs::PersonDetection initPersonDetection() {
+    openpose_ros_msgs::PersonDetection person;
     person.Nose = initBodyPartDetection();
     person.Neck = initBodyPartDetection();
     person.RShoulder = initBodyPartDetection();
@@ -273,7 +273,7 @@ openpose_ros::PersonDetection initPersonDetection() {
 }
 
 
-std::string getShirtColor(openpose_ros::PersonDetection person, cv::Mat image)	{
+std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image)	{
 	printf ("getShirtColor() \n");
 	cv::Rect roi;
 
@@ -461,7 +461,7 @@ std::string getShirtColor(openpose_ros::PersonDetection person, cv::Mat image)	{
 
 
 
-void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
+void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
     printf ("getHeadBounds()");
     int amount = ceil(person.Nose.confidence) + ceil(person.REar.confidence) + ceil(person.REye.confidence) + ceil(person.LEar.confidence) + ceil(person.LEye.confidence);
     float uf = person.Nose.u + person.REar.u + person.REye.u + person.LEar.u + person.LEye.u;
@@ -503,8 +503,8 @@ void getHeadBounds(openpose_ros::PersonDetection person, int &x, int &y, int &wi
     }
 }
 
-openpose_ros::BodyPartDetection initBodyPartDetection() {
-    openpose_ros::BodyPartDetection bodypart;
+openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
+    openpose_ros_msgs::BodyPartDetection bodypart;
     bodypart.pos.x = 0.0;
     bodypart.pos.y = 0.0;
     bodypart.pos.z = 0.0;
@@ -570,7 +570,7 @@ int main(int argc, char **argv) {
     if(ros::service::exists("gender_and_age",false)) {
         ROS_INFO("gender and age classify service exists.");
         gender_age = true;
-        face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age::GenderAndAgeService>("gender_and_age")));
+        face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("gender_and_age")));
     }
     
 
