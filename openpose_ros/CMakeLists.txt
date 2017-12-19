@@ -15,6 +15,8 @@ find_package(catkin REQUIRED
   openpose_ros_msgs
 )
 
+find_package(OpenCV REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -126,6 +128,7 @@ target_link_libraries(detect_people_server
    ${catkin_LIBRARIES}
    ${OPENPOSE_DIR}/lib/libopenpose.so
    ${OPENPOSE_DIR}/lib64/libcudart.so.8.0
+   ${OpenCV_LIBS}
  )
 
 #############
