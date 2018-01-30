@@ -60,8 +60,7 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
-//create tf listener to transform positions of detected into robot coordinates
-tf::TransformListener listener;
+
 std::string cameraFrame;
 std::string base_frame;
 
@@ -103,7 +102,16 @@ bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_
     poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
     const auto poseKeypoints = poseExtractor->getPoseKeypoints();
     
-    listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
+    tf::TransformListener listener;
+
+    try {
+        listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0));
+        listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
+        ROS_INFO("Got TF: %f %f %f", transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
+    } catch (tf::TransformException ex) {
+        ROS_ERROR("Could not get transform from camera frame to base frame: %s", ex.what());
+        return false;
+    }
 
     if (visualize) {
         op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
@@ -583,6 +591,9 @@ int main(int argc, char **argv) {
     
     localNH.param("camera_frame", cameraFrame, std::string("xtionupper_rgb_optical_frame"));
     localNH.param("base_frame", base_frame, std::string("base_link"));
+    
+    //create tf listener to transform positions of detected into robot coordinates
+    tf::TransformListener listener;
 
     try {
         listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0));
