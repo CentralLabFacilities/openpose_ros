@@ -60,6 +60,11 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
+//create tf listener to transform positions of detected into robot coordinates
+tf::TransformListener listener;
+std::string cameraFrame;
+std::string base_frame;
+
 void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     cv_bridge::CvImagePtr cvBridge;
     try {
@@ -97,6 +102,8 @@ bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_
     ROS_INFO("Detect poseys using forward pass.");
     poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
     const auto poseKeypoints = poseExtractor->getPoseKeypoints();
+    
+    listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
 
     if (visualize) {
         op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
@@ -572,14 +579,9 @@ int main(int argc, char **argv) {
         gender_age = true;
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("gender_and_age")));
     }
+
     
-
-    //create tf listener to transform positions of detected into robot coordinates
-    tf::TransformListener listener;
-
-    std::string cameraFrame;
     localNH.param("camera_frame", cameraFrame, std::string("xtionupper_rgb_optical_frame"));
-    std::string base_frame;
     localNH.param("base_frame", base_frame, std::string("base_link"));
 
     try {
