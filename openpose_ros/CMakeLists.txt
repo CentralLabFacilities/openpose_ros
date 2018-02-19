@@ -11,7 +11,7 @@ find_package(catkin REQUIRED
   roscpp
   cv_bridge
   tf
-  gender_and_age
+  gender_and_age_msgs
   openpose_ros_msgs
 )
 
