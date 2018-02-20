@@ -1,6 +1,6 @@
 <package>
    <name>openpose_ros_msgs</name>
-   <version>0.0.2</version>
+   <version>0.0.3</version>
    <description>
       This package defines messages used in openpose ros wrapper.
    </description>
@@ -22,5 +22,6 @@
    <run_depend>sensor_msgs</run_depend>
    <run_depend>geometry_msgs</run_depend>
    <run_depend>gender_and_age_msgs</run_depend>
+
 
 </package>

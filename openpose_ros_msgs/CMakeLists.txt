@@ -14,11 +14,14 @@ add_message_files(
   FILES
    BodyPartDetection.msg
    PersonDetection.msg
+   PersonAttributes.msg
 )
 
 add_service_files(
   FILES
    DetectPeople.srv
+   GetPersonAttributes.srv
+   GetCrowdAttributes.srv
 )
 
 generate_messages(
