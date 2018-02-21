@@ -15,21 +15,26 @@
 #include <ros/service_server.h>
 #include <ros/init.h>
 #include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/Point.h>
-
 #include <cv_bridge/cv_bridge.h>
-#include <tf/transform_listener.h>
-
 #include <openpose_ros_msgs/DetectPeople.h>
 #include <openpose_ros_msgs/PersonDetection.h>
 #include <openpose_ros_msgs/BodyPartDetection.h>
+#include <openpose_ros_msgs/GetPersonAttributes.h>
+#include <openpose_ros_msgs/GetCrowdAttributes.h>
+#include <openpose_ros_msgs/PersonAttributes.h>
+#include <bayes_people_tracker_msgs/PeopleTrackerImage.h>
 #include <algorithm>
 
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 
 #include <cstdint>
 #include <opencv2/core/core.hpp>
+
+
+enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
+enum posture{SITTING = 1, STANDING = 2, LYING = 3};
+
 
 
 std::shared_ptr <op::PoseExtractor> poseExtractor;
@@ -41,77 +46,96 @@ std::map<unsigned int, std::string> cocoBodyParts;
 int scaleNumber;
 double scaleGap;
 cv::Mat inputImage;
+bayes_people_tracker_msgs::PeopleTrackerImage peopleTrackerImages;
+std::mutex personMutex;
 std::mutex imageMutex;
-std::mutex pointcloudMutex;
 bool visualize;
-sensor_msgs::PointCloud2 pointcloud;
-tf::StampedTransform transform;
-
 bool gender_age = false;
 bool shirt_color = true;
 
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
 
+openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::PersonDetection person);
+
+openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid);
+
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 
 openpose_ros_msgs::PersonDetection initPersonDetection();
+
+bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res);
+
+bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res);
 
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
+void imageCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
+    //liste von people image, people image hat uuid und image
+    personMutex.lock();
+    peopleTrackerImages = msg;
+    personMutex.unlock();
+}
 
-std::string cameraFrame;
-std::string base_frame;
-
-void imageCb(const sensor_msgs::ImageConstPtr &msg) {
+void getImageByUuid(std::string id) {
     cv_bridge::CvImagePtr cvBridge;
-    try {
-        cvBridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    bool foundPerson = false;
+    personMutex.lock();
+    for(int i = 0; i< peopleTrackerImages.trackedPeopleImg.size(); i++){
+        if (peopleTrackerImages.trackedPeopleImg.at(i).uuid.compare(id)){
+            try {
+                cvBridge = cv_bridge::toCvCopy(peopleTrackerImages.trackedPeopleImg.at(i).image, sensor_msgs::image_encodings::BGR8);
+            }
+            catch (cv_bridge::Exception &e) {
+                ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
+                personMutex.unlock();
+                return;
+            }
+            inputImage = cvBridge->image;
+            foundPerson = true;
+            if (visualize) {
+                cv::imshow("input", inputImage);
+                cv::waitKey(3);
+            }
+            break;
+        }
     }
-    catch (cv_bridge::Exception &e) {
-        ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
-        return;
+    if(!foundPerson) {
+        inputImage = cv::Mat::zeros(30, 30, inputImage.type());
+        ROS_WARN("NO PERSON WITH UUID %s FOUND!", id.c_str());
     }
+    personMutex.unlock();
+}
+
+bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
     imageMutex.lock();
-    inputImage = cvBridge->image;
-    if (visualize) {
-        cv::imshow("input", inputImage);
-        cv::waitKey(3);
+    for(int i = 0; i < peopleTrackerImages.trackedPeopleImg.size(); i++){
+        res.personId.push_back(peopleTrackerImages.trackedPeopleImg.at(i).uuid);
+        res.attributes.push_back(getAttributes(peopleTrackerImages.trackedPeopleImg.at(i).uuid));
     }
     imageMutex.unlock();
 }
 
-void pointcloudCb(const sensor_msgs::PointCloud2 pCloud) {
-    pointcloudMutex.lock();
-    pointcloud = pCloud;
-    pointcloudMutex.unlock();
+bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res) {
+    imageMutex.lock();
+    ROS_INFO("Called GetAttributes service.");
+    res.attributes = getAttributes(req.personId);
+    imageMutex.unlock();
+    return true;
 }
 
-bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_msgs::DetectPeople::Response &res) {
-    ROS_INFO("Called detect people service.");
+openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
+    getImageByUuid(uuid);
     op::Array<float> netInputArray;
     std::vector<float> scaleRatios;
     op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
     ROS_INFO("Converting cv image to openpose array.");
-    imageMutex.lock();
-    pointcloudMutex.lock();
     ROS_INFO("Im cols %d, im rows %d", inputImage.cols, inputImage.rows);
     std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImage);
-    ROS_INFO("Detect poseys using forward pass.");
+    ROS_INFO("Detect poses using forward pass.");
     poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
     const auto poseKeypoints = poseExtractor->getPoseKeypoints();
-    
-    tf::TransformListener listener;
-
-    try {
-        listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0));
-        listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
-        ROS_INFO("Got TF: %f %f %f", transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
-    } catch (tf::TransformException ex) {
-        ROS_ERROR("Could not get transform from camera frame to base frame: %s", ex.what());
-        return false;
-    }
 
     if (visualize) {
         op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
@@ -128,19 +152,22 @@ bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_
     }
 
     gender_and_age_msgs::GenderAndAgeService srv;
-    // never use list, bitch!!!
-    std::vector<std::string> shirt_list;
 
+    std::vector<std::string> shirt_list;
+    std::vector<openpose_ros_msgs::PersonDetection> person_list;
     ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
+
+    double best_confidence = 0;
+    double confidence = 0;
+    int best_confidence_index = 0;
+
     for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
         openpose_ros_msgs::PersonDetection person = initPersonDetection();
         for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
             size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
             openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
             bodypart.confidence = poseKeypoints[bodypart_id + 2];
-
-            //credit to Saurav Agarwal (http://sauravag.com/2016/11/how-to-get-depth-xyz-of-a-2d-pixel-from-pointcloud2-or-kinect-data/)
-            //for conversion method
+            confidence += bodypart.confidence;
             int u = poseKeypoints[bodypart_id];
             int v = poseKeypoints[bodypart_id + 1];
 
@@ -148,34 +175,6 @@ bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_
             bodypart.v = v;
 
             ROS_INFO("u: %d, v: %d", u, v);
-
-            int pcWidth = pointcloud.width;
-            int pcHeight = pointcloud.height;
-
-            int arrayPosition = v * pointcloud.row_step + u * pointcloud.point_step;
-            int arrayPosX = arrayPosition + pointcloud.fields[0].offset; // X has an offset of 0
-            int arrayPosY = arrayPosition + pointcloud.fields[1].offset; // Y has an offset of 4
-            int arrayPosZ = arrayPosition + pointcloud.fields[2].offset; // Z has an offset of 8
-
-            float X = 0.0;
-            float Y = 0.0;
-            float Z = 0.0;
-
-            memcpy(&X, &pointcloud.data[arrayPosX], sizeof(float));
-            memcpy(&Y, &pointcloud.data[arrayPosY], sizeof(float));
-            memcpy(&Z, &pointcloud.data[arrayPosZ], sizeof(float));
-
-            ROS_INFO("X: %f, Y: %f, Z: %f", X, Y, Z);
-            tf::Transform baseToCam;
-            tf::Transform bodyPartTransform;
-            bodyPartTransform.setOrigin(tf::Vector3(X, Y, Z));
-            bodyPartTransform.setRotation(tf::Quaternion(0, 0, 0, 1));
-
-            baseToCam.mult(transform.inverse(), bodyPartTransform);
-
-            bodypart.pos.x = baseToCam.getOrigin().x();
-            bodypart.pos.y = baseToCam.getOrigin().y();
-            bodypart.pos.z = baseToCam.getOrigin().z();
 
             std::string bodypart_name = cocoBodyParts[j];
 
@@ -205,8 +204,15 @@ bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_
                 ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
                 bodypart_name.c_str());
             }
-
+            confidence = confidence / poseKeypoints.getSize(1);
+            if(confidence > best_confidence) {
+                best_confidence = confidence;
+                best_confidence_index = i;
+            }
+            confidence = 0;
         }
+
+
         if(gender_age) {
 
             printf ("Gender and age is ON");
@@ -223,45 +229,64 @@ bool detectPeopleCb(openpose_ros_msgs::DetectPeople::Request &req, openpose_ros_
             srv.request.objects.push_back(*inputImage_msg);
 
         }
-	if(shirt_color) {
-		printf("Shirt detection is ON \n");
-		try{
-			shirt_list.push_back(getShirtColor(person, inputImage));
-		} catch (cv::Exception e) {
-			
-			std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
-		} 
-	}
+        if(shirt_color) {
+                printf("Shirt detection is ON \n");
+                try{
+                        shirt_list.push_back(getShirtColor(person, inputImage));
+                } catch (cv::Exception e) {
 
-	
-        res.people_list.push_back(person);
+                        std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
+                }
+        }
+
+        person_list.push_back(person);
     }
+
+
+
     if(gender_age) {
         face_client_ptr.get()->call(srv);
-	//ROS_INFO("gasize: %u",srv.response.gender_and_age_response.gender_and_age_list.size());
-    	//ROS_INFO("personsize: %u",res.people_list.size());
-    	for (size_t i = 0; i < res.people_list.size(); ++i) {
-        	res.people_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
-        	res.people_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+        ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
+        ROS_INFO("personsize: %u",(int)person_list.size());
+        for (size_t i = 0; i < person_list.size(); ++i) {
+                person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+                person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
 
 
-    	}
+        }
     }
     if(shirt_color) {
-    	for (int i = 0; i < shirt_list.size(); i++)	{
-		std::string shirtcolor = shirt_list[i];
-		ROS_INFO ("color person %d: %s, ", i, shirtcolor.c_str());
-		printf("\n");
-		
-		res.people_list.at(i).shirtcolor = shirtcolor;
-	}    
+        for (int i = 0; i < shirt_list.size(); i++)	{
+                std::string shirtcolor = shirt_list[i];
+                ROS_INFO ("color person %d: %s, ", i, shirtcolor.c_str());
+                printf("\n");
+
+                person_list.at(i).shirtcolor = shirtcolor;
+        }
     }
 
-    imageMutex.unlock();
-    pointcloudMutex.unlock();
-
-    return true;
+    return getPersonAttributes(person_list.at(best_confidence_index));
 }
+
+openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::PersonDetection person) {
+    openpose_ros_msgs::PersonAttributes attributes;
+    attributes.gender_hyp = person.gender_hyp;
+    attributes.age_hyp = person.age_hyp;
+    attributes.shirtcolor = person.shirtcolor;
+    attributes.posture = STANDING;
+    if(person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
+            attributes.gesture = RAISING_RIGHT_ARM;
+    } else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
+        attributes.gesture = RAISING_LEFT_ARM;
+    } else if ((person.LWrist.v < person.LShoulder.v && person.LWrist.v > 0 && person.LShoulder.v > 0) ||
+               (person.RWrist.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0)) {
+        attributes.gesture = WAVING;
+    } else {
+        attributes.gesture = NEUTRAL;
+    }
+    return attributes;
+}
+
 
 openpose_ros_msgs::PersonDetection initPersonDetection() {
     openpose_ros_msgs::PersonDetection person;
@@ -559,7 +584,7 @@ int main(int argc, char **argv) {
     poseModel = op::PoseModel::COCO_18;
 
     std::string modelsFolder;
-    localNH.param("models_folder", modelsFolder, std::string("/vol/robocup/nightly/share/openpose/models/"));
+    localNH.param("models_folder", modelsFolder, std::string("/home/nao/ros_distro/share/openpose/models/"));
 
     int gpuId;
     localNH.param("gpu_id", gpuId, 0);
@@ -576,11 +601,9 @@ int main(int argc, char **argv) {
 
     ros::NodeHandle n;
     //advertise service to get detected people poses
-    ros::ServiceServer service = n.advertiseService("detect_people", detectPeopleCb);
+    ros::ServiceServer service = n.advertiseService("/open_pose/get_person_attributes", getPersonAttributesCb);
     //subscriber to recieve rgb image
     ros::Subscriber imageSub = n.subscribe("/xtion/rgb/image_raw", 100, imageCb);
-    //subscriber to recieve pointcloud
-    ros::Subscriber pointcloudSub = n.subscribe("/xtion/depth/points", 100, pointcloudCb);
     //rosservice for age and gender detection
     if(ros::service::exists("gender_and_age",false)) {
         ROS_INFO("gender and age classify service exists.");
@@ -588,26 +611,9 @@ int main(int argc, char **argv) {
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("gender_and_age")));
     }
 
-    
-    localNH.param("camera_frame", cameraFrame, std::string("xtionupper_rgb_optical_frame"));
-    localNH.param("base_frame", base_frame, std::string("base_link"));
-    
-    //create tf listener to transform positions of detected into robot coordinates
-    tf::TransformListener listener;
-
-    try {
-        listener.waitForTransform(cameraFrame, base_frame, ros::Time(0), ros::Duration(10.0));
-        listener.lookupTransform(cameraFrame, base_frame, ros::Time(0), transform);
-        ROS_INFO("Got TF: %f %f %f", transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
-    } catch (tf::TransformException ex) {
-        ROS_ERROR("Could not get transform from camera frame to base frame: %s", ex.what());
-        return 1;
-    }
-
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
-	
-	//ros::MultiThreadedSpinner().spin();
+
 
     return 0;
 }

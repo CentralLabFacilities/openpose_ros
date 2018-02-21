@@ -13,6 +13,7 @@ find_package(catkin REQUIRED
   tf
   gender_and_age_msgs
   openpose_ros_msgs
+  bayes_people_tracker_msgs
 )
 
 find_package(OpenCV REQUIRED)
