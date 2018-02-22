@@ -601,9 +601,11 @@ int main(int argc, char **argv) {
 
     ros::NodeHandle n;
     //advertise service to get detected people poses
-    ros::ServiceServer service = n.advertiseService("/open_pose/get_person_attributes", getPersonAttributesCb);
+    ros::ServiceServer servicePerson = n.advertiseService("/open_pose/get_person_attributes", getPersonAttributesCb);
+    ros::ServiceServer serviceCrowd = n.advertiseService("/open_pose/get_crowd_attributes", getCrowdAttributesCb);
+
     //subscriber to recieve rgb image
-    ros::Subscriber imageSub = n.subscribe("/xtion/rgb/image_raw", 100, imageCb);
+    ros::Subscriber imageSub = n.subscribe("/people_tracker_images", 100, imageCb);
     //rosservice for age and gender detection
     if(ros::service::exists("gender_and_age",false)) {
         ROS_INFO("gender and age classify service exists.");
