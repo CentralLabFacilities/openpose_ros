@@ -1,4 +1,5 @@
 <launch>
+        <arg name="path" default="/vol/pepper/systems/pepper-robocup-nightly/share/openpose/models/"/>
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
                 <remap from="/xtion/rgb/image_raw" to="/pepper_robot/sink/front/image_raw"/>
 		<param name="net_input_size_width" value="320" />
@@ -9,7 +10,7 @@
 		<param name="output_size_height" value="480" />
 		<param name="scale_number" value="1" />
 		<param name="scale_gap" value="0.3" />
-                <param name="models_folder" value="/vol/pepper/systems/pepper-robocup-nightly/share/openpose/models/" />
+                <param name="models_folder" value=$(arg path) />
 		<param name="gpu_id" value="0" />
                 <param name="visualize" value="false" />
     </node>
