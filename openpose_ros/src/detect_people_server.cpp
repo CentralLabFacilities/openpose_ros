@@ -79,9 +79,8 @@ void imageCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     personMutex.unlock();
 }
 
-void getImageByUuid(std::string id) {
+bool getImageByUuid(std::string id) {
     cv_bridge::CvImagePtr cvBridge;
-    bool foundPerson = false;
     personMutex.lock();
     for(int i = 0; i< peopleTrackerImages.trackedPeopleImg.size(); i++){
         ROS_INFO("looking at uuid %s", peopleTrackerImages.trackedPeopleImg.at(i).uuid.c_str());
@@ -92,22 +91,21 @@ void getImageByUuid(std::string id) {
             catch (cv_bridge::Exception &e) {
                 ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
                 personMutex.unlock();
-                return;
+                return false;
             }
             inputImage = cvBridge->image;
-            foundPerson = true;
             if (visualize) {
                 cv::imshow("input", inputImage);
                 cv::waitKey(3);
             }
-            break;
+            personMutex.unlock();
+            return true;
         }
     }
-    if(!foundPerson) {
-        inputImage = cv::Mat::zeros(30, 30, inputImage.type());
-        ROS_WARN("NO PERSON WITH UUID %s FOUND!", id.c_str());
-    }
+    inputImage = cv::Mat::zeros(30, 30, inputImage.type());
+    ROS_WARN("NO PERSON WITH UUID %s FOUND!", id.c_str());
     personMutex.unlock();
+    return false;
 }
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
@@ -128,146 +126,148 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
 }
 
 openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
-    getImageByUuid(uuid);
-    op::Array<float> netInputArray;
-    std::vector<float> scaleRatios;
-    op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
-    ROS_INFO("Converting cv image to openpose array.");
-    ROS_INFO("Im cols %d, im rows %d", inputImage.cols, inputImage.rows);
-    std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImage);
-    ROS_INFO("Detect poses using forward pass.");
-    poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
-    const auto poseKeypoints = poseExtractor->getPoseKeypoints();
+    if(getImageByUuid(uuid)) {
+        op::Array<float> netInputArray;
+        std::vector<float> scaleRatios;
+        op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
+        ROS_INFO("Converting cv image to openpose array.");
+        ROS_INFO("Im cols %d, im rows %d", inputImage.cols, inputImage.rows);
+        std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImage);
+        ROS_INFO("Detect poses using forward pass.");
+        poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
+        const auto poseKeypoints = poseExtractor->getPoseKeypoints();
 
-    if (visualize) {
-        op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
-        op::OpOutputToCvMat opOutputToCvMat{outputSize};
-        double scaleInputToOutput;
-        op::Array<float> outputArray;
-        op::CvMatToOpOutput cvMatToOpOutput{outputSize};
-        std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
-        poseRenderer.renderPose(outputArray, poseKeypoints);
-        auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
+        if (visualize) {
+            op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
+            op::OpOutputToCvMat opOutputToCvMat{outputSize};
+            double scaleInputToOutput;
+            op::Array<float> outputArray;
+            op::CvMatToOpOutput cvMatToOpOutput{outputSize};
+            std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
+            poseRenderer.renderPose(outputArray, poseKeypoints);
+            auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
 
-        cv::imshow("Detections", outputImage);
-        cv::waitKey(3);
-    }
-
-    gender_and_age_msgs::GenderAndAgeService srv;
-
-    std::vector<std::string> shirt_list;
-    std::vector<openpose_ros_msgs::PersonDetection> person_list;
-    ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
-
-    double best_confidence = 0;
-    double confidence = 0;
-    int best_confidence_index = 0;
-
-    for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
-        openpose_ros_msgs::PersonDetection person = initPersonDetection();
-        for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
-            size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
-            openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
-            bodypart.confidence = poseKeypoints[bodypart_id + 2];
-            confidence += bodypart.confidence;
-            int u = poseKeypoints[bodypart_id];
-            int v = poseKeypoints[bodypart_id + 1];
-
-            bodypart.u = u;
-            bodypart.v = v;
-
-            ROS_INFO("u: %d, v: %d", u, v);
-
-            std::string bodypart_name = cocoBodyParts[j];
-
-            ROS_INFO("BodyPartName: %s", bodypart_name.c_str());
-            ROS_INFO("Confidence: %f", bodypart.confidence);
-
-            if (bodypart_name == "Nose") person.Nose = bodypart;
-            else if (bodypart_name == "Neck") person.Neck = bodypart;
-            else if (bodypart_name == "RShoulder") person.RShoulder = bodypart;
-            else if (bodypart_name == "RElbow") person.RElbow = bodypart;
-            else if (bodypart_name == "RWrist") person.RWrist = bodypart;
-            else if (bodypart_name == "LShoulder") person.LShoulder = bodypart;
-            else if (bodypart_name == "LElbow") person.LElbow = bodypart;
-            else if (bodypart_name == "LWrist") person.LWrist = bodypart;
-            else if (bodypart_name == "RHip") person.RHip = bodypart;
-            else if (bodypart_name == "RKnee") person.RKnee = bodypart;
-            else if (bodypart_name == "RAnkle") person.RAnkle = bodypart;
-            else if (bodypart_name == "LHip") person.LHip = bodypart;
-            else if (bodypart_name == "LKnee") person.LKnee = bodypart;
-            else if (bodypart_name == "LAnkle") person.LAnkle = bodypart;
-            else if (bodypart_name == "REye") person.REye = bodypart;
-            else if (bodypart_name == "LEye") person.LEye = bodypart;
-            else if (bodypart_name == "REar") person.REar = bodypart;
-            else if (bodypart_name == "LEar") person.LEar = bodypart;
-            else if (bodypart_name == "Chest") person.Chest = bodypart;
-            else {
-                ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
-                bodypart_name.c_str());
-            }
-            confidence = confidence / poseKeypoints.getSize(1);
-            if(confidence > best_confidence) {
-                best_confidence = confidence;
-                best_confidence_index = i;
-            }
-            confidence = 0;
+            cv::imshow("Detections", outputImage);
+            cv::waitKey(3);
         }
+
+        gender_and_age_msgs::GenderAndAgeService srv;
+
+        std::vector<std::string> shirt_list;
+        std::vector<openpose_ros_msgs::PersonDetection> person_list;
+        ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
+
+        double best_confidence = 0;
+        double confidence = 0;
+        int best_confidence_index = 0;
+
+        for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
+            openpose_ros_msgs::PersonDetection person = initPersonDetection();
+            for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
+                size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
+                openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
+                bodypart.confidence = poseKeypoints[bodypart_id + 2];
+                confidence += bodypart.confidence;
+                int u = poseKeypoints[bodypart_id];
+                int v = poseKeypoints[bodypart_id + 1];
+
+                bodypart.u = u;
+                bodypart.v = v;
+
+                ROS_INFO("u: %d, v: %d", u, v);
+
+                std::string bodypart_name = cocoBodyParts[j];
+
+                ROS_INFO("BodyPartName: %s", bodypart_name.c_str());
+                ROS_INFO("Confidence: %f", bodypart.confidence);
+
+                if (bodypart_name == "Nose") person.Nose = bodypart;
+                else if (bodypart_name == "Neck") person.Neck = bodypart;
+                else if (bodypart_name == "RShoulder") person.RShoulder = bodypart;
+                else if (bodypart_name == "RElbow") person.RElbow = bodypart;
+                else if (bodypart_name == "RWrist") person.RWrist = bodypart;
+                else if (bodypart_name == "LShoulder") person.LShoulder = bodypart;
+                else if (bodypart_name == "LElbow") person.LElbow = bodypart;
+                else if (bodypart_name == "LWrist") person.LWrist = bodypart;
+                else if (bodypart_name == "RHip") person.RHip = bodypart;
+                else if (bodypart_name == "RKnee") person.RKnee = bodypart;
+                else if (bodypart_name == "RAnkle") person.RAnkle = bodypart;
+                else if (bodypart_name == "LHip") person.LHip = bodypart;
+                else if (bodypart_name == "LKnee") person.LKnee = bodypart;
+                else if (bodypart_name == "LAnkle") person.LAnkle = bodypart;
+                else if (bodypart_name == "REye") person.REye = bodypart;
+                else if (bodypart_name == "LEye") person.LEye = bodypart;
+                else if (bodypart_name == "REar") person.REar = bodypart;
+                else if (bodypart_name == "LEar") person.LEar = bodypart;
+                else if (bodypart_name == "Chest") person.Chest = bodypart;
+                else {
+                    ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
+                    bodypart_name.c_str());
+                }
+                confidence = confidence / poseKeypoints.getSize(1);
+                if(confidence > best_confidence) {
+                    best_confidence = confidence;
+                    best_confidence_index = i;
+                }
+                confidence = 0;
+            }
+
+
+            if(gender_age) {
+
+                printf ("Gender and age is ON");
+                int crop_x, crop_y, crop_width, crop_height;
+                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, inputImage);
+
+                cv::Rect roi;
+                roi.x = crop_x;
+                roi.y = crop_y;
+                roi.width = crop_width;
+                roi.height = crop_height;
+                cv::Mat crop = inputImage(roi);
+                sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+                srv.request.objects.push_back(*inputImage_msg);
+
+            }
+            if(shirt_color) {
+                    printf("Shirt detection is ON \n");
+                    try{
+                            shirt_list.push_back(getShirtColor(person, inputImage));
+                    } catch (cv::Exception e) {
+
+                            std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
+                    }
+            }
+
+            person_list.push_back(person);
+        }
+
 
 
         if(gender_age) {
+            face_client_ptr.get()->call(srv);
+            ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
+            ROS_INFO("personsize: %u",(int)person_list.size());
+            for (size_t i = 0; i < person_list.size(); ++i) {
+                    person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+                    person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
 
-            printf ("Gender and age is ON");
-            int crop_x, crop_y, crop_width, crop_height;
-            getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, inputImage);
 
-            cv::Rect roi;
-            roi.x = crop_x;
-            roi.y = crop_y;
-            roi.width = crop_width;
-            roi.height = crop_height;
-            cv::Mat crop = inputImage(roi);
-            sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
-            srv.request.objects.push_back(*inputImage_msg);
-
+            }
         }
         if(shirt_color) {
-                printf("Shirt detection is ON \n");
-                try{
-                        shirt_list.push_back(getShirtColor(person, inputImage));
-                } catch (cv::Exception e) {
+            for (int i = 0; i < shirt_list.size(); i++)	{
+                    std::string shirtcolor = shirt_list[i];
+                    ROS_INFO ("color person %d: %s, ", i, shirtcolor.c_str());
+                    printf("\n");
 
-                        std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
-                }
+                    person_list.at(i).shirtcolor = shirtcolor;
+            }
         }
-
-        person_list.push_back(person);
+        return getPersonAttributes(person_list.at(best_confidence_index));
     }
-
-
-
-    if(gender_age) {
-        face_client_ptr.get()->call(srv);
-        ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
-        ROS_INFO("personsize: %u",(int)person_list.size());
-        for (size_t i = 0; i < person_list.size(); ++i) {
-                person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
-                person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
-
-
-        }
-    }
-    if(shirt_color) {
-        for (int i = 0; i < shirt_list.size(); i++)	{
-                std::string shirtcolor = shirt_list[i];
-                ROS_INFO ("color person %d: %s, ", i, shirtcolor.c_str());
-                printf("\n");
-
-                person_list.at(i).shirtcolor = shirtcolor;
-        }
-    }
-
-    return getPersonAttributes(person_list.at(best_confidence_index));
+    openpose_ros_msgs::PersonAttributes attributes;
+    return attributes;
 }
 
 openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::PersonDetection person) {
