@@ -74,7 +74,6 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
     personMutex.lock();
-    ROS_INFO("saving new people tracker image message");
     peopleTrackerImages = msg;
     personMutex.unlock();
 }
@@ -84,7 +83,7 @@ bool getImageByUuid(std::string id) {
     personMutex.lock();
     for(int i = 0; i< peopleTrackerImages.trackedPeopleImg.size(); i++){
         ROS_INFO("looking at uuid %s", peopleTrackerImages.trackedPeopleImg.at(i).uuid.c_str());
-        if (peopleTrackerImages.trackedPeopleImg.at(i).uuid.compare(id)){
+        if (peopleTrackerImages.trackedPeopleImg.at(i).uuid.compare(id) == 0){
             try {
                 cvBridge = cv_bridge::toCvCopy(peopleTrackerImages.trackedPeopleImg.at(i).image, sensor_msgs::image_encodings::BGR8);
             }
@@ -122,6 +121,8 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
     ROS_INFO("Called GetAttributes service.");
     res.attributes = getAttributes(req.personId);
     imageMutex.unlock();
+//    if(res.attributes.posture == 0 && res.attributes.gesture = 0)
+//        return false;
     return true;
 }
 
