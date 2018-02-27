@@ -71,7 +71,7 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
-void imageCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
+void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
     personMutex.lock();
     ROS_INFO("saving new people tracker image message");
@@ -562,6 +562,14 @@ int main(int argc, char **argv) {
     ros::NodeHandle localNH("~");
 
     //read in params
+
+    std::string extendedPeopleTopic = "/people_tracker/people/extended";
+    localNH.param("extended_people_topic", extendedPeopleTopic, extendedPeopleTopic);
+    std::string personAttServTopic = "/open_pose/get_person_attributes";
+    localNH.param("person_attribute_service_topic", personAttServTopic, personAttServTopic);
+    std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
+    localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
+
     int netInputSizeWidth;
     localNH.param("net_input_size_width", netInputSizeWidth, 320);
     int netInputSizeHeight;
@@ -603,11 +611,12 @@ int main(int argc, char **argv) {
 
     ros::NodeHandle n;
     //advertise service to get detected people poses
-    ros::ServiceServer servicePerson = n.advertiseService("/open_pose/get_person_attributes", getPersonAttributesCb);
-    ros::ServiceServer serviceCrowd = n.advertiseService("/open_pose/get_crowd_attributes", getCrowdAttributesCb);
+    ros::ServiceServer servicePerson = n.advertiseService(personAttServTopic, getPersonAttributesCb);
+    ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
 
-    //subscriber to recieve rgb image
-    ros::Subscriber imageSub = n.subscribe("/people_tracker/people/extended", 100, imageCb);
+    //subscriber to recieve extended person message
+    ros::Subscriber extendedPeopleSub = n.subscribe(extendedPeopleTopic, 100, peopleExtendedCb);
+
     //rosservice for age and gender detection
     if(ros::service::exists("gender_and_age",false)) {
         ROS_INFO("gender and age classify service exists.");
