@@ -607,7 +607,7 @@ int main(int argc, char **argv) {
     ros::ServiceServer serviceCrowd = n.advertiseService("/open_pose/get_crowd_attributes", getCrowdAttributesCb);
 
     //subscriber to recieve rgb image
-    ros::Subscriber imageSub = n.subscribe("/people_tracker/images", 100, imageCb);
+    ros::Subscriber imageSub = n.subscribe("/people_tracker/people/extended", 100, imageCb);
     //rosservice for age and gender detection
     if(ros::service::exists("gender_and_age",false)) {
         ROS_INFO("gender and age classify service exists.");
