@@ -138,19 +138,19 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
         poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
         const auto poseKeypoints = poseExtractor->getPoseKeypoints();
 
-        if (visualize) {
-            op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
-            op::OpOutputToCvMat opOutputToCvMat{outputSize};
-            double scaleInputToOutput;
-            op::Array<float> outputArray;
-            op::CvMatToOpOutput cvMatToOpOutput{outputSize};
-            std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
-            poseRenderer.renderPose(outputArray, poseKeypoints);
-            auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
+//        if (visualize) {
+//            op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
+//            op::OpOutputToCvMat opOutputToCvMat{outputSize};
+//            double scaleInputToOutput;
+//            op::Array<float> outputArray;
+//            op::CvMatToOpOutput cvMatToOpOutput{outputSize};
+//            std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
+//            poseRenderer.renderPose(outputArray, poseKeypoints);
+//            auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
 
-            cv::imshow("Detections", outputImage);
-            cv::waitKey(3);
-        }
+//            cv::imshow("Detections", outputImage);
+//            cv::waitKey(3);
+//        }
 
         gender_and_age_msgs::GenderAndAgeService srv;
 

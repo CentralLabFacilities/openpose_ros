@@ -15,6 +15,6 @@
                 <param name="crowd_attribute_service_topic" value="/open_pose/get_crowd_attributes" />
                 <param name="models_folder" value="$(arg path)" />
 		<param name="gpu_id" value="0" />
-                <param name="visualize" value="false" />
+                <param name="visualize" value="true" />
     </node>
 </launch>
