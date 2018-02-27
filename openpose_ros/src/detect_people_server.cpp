@@ -94,7 +94,7 @@ bool getImageByUuid(std::string id) {
             }
             inputImage = cvBridge->image;
             if (visualize) {
-                cv::imshow("input", inputImage);
+                cv::imshow("openpose", inputImage);
                 cv::waitKey(3);
             }
             personMutex.unlock();
@@ -114,6 +114,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         res.attributes.push_back(getAttributes(peopleTrackerImages.trackedPeopleImg.at(i).uuid));
     }
     imageMutex.unlock();
+    return true;
 }
 
 bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res) {
