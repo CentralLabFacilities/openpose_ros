@@ -96,7 +96,7 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     imageMutexCrowd.lock();
     inputImageCrowd = cvBridge->image;
     if (visualize) {
-        cv::imshow("input", inputImageCrowd);
+        cv::imshow("openpose_crowd", inputImageCrowd);
         cv::waitKey(3);
     }
     imageMutexCrowd.unlock();
@@ -118,7 +118,7 @@ bool getImageByUuid(std::string id) {
             }
             inputImage = cvBridge->image;
             if (visualize) {
-                cv::imshow("openpose", inputImage);
+                cv::imshow("openpose_person", inputImage);
                 cv::waitKey(3);
             }
             personMutex.unlock();
@@ -132,7 +132,7 @@ bool getImageByUuid(std::string id) {
 }
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
-
+    imageMutexCrowd.lock();
     op::Array<float> netInputArray;
     std::vector<float> scaleRatios;
     op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
@@ -220,7 +220,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
 
         person_list.push_back(person);
     }
-
+    imageMutexCrowd.unlock();
     if(gender_age) {
         face_client_ptr.get()->call(srv);
         ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
