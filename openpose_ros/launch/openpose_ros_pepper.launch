@@ -13,6 +13,7 @@
                 <param name="extended_people_topic" value="/people_tracker/people/extended" />
                 <param name="person_attribute_service_topic" value="/open_pose/get_person_attributes" />
                 <param name="crowd_attribute_service_topic" value="/open_pose/get_crowd_attributes" />
+                <param name="image_topic" value="/pepper_robot/camera/front/image_raw" />
                 <param name="models_folder" value="$(arg path)" />
 		<param name="gpu_id" value="0" />
                 <param name="visualize" value="true" />

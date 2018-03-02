@@ -25,12 +25,13 @@
 #include <openpose_ros_msgs/PersonAttributes.h>
 #include <bayes_people_tracker_msgs/PeopleTrackerImage.h>
 #include <algorithm>
-
+#include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 
 #include <cstdint>
 #include <opencv2/core/core.hpp>
 
+#define PI 3.14159265
 
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
@@ -46,12 +47,16 @@ std::map<unsigned int, std::string> cocoBodyParts;
 int scaleNumber;
 double scaleGap;
 cv::Mat inputImage;
+cv::Mat inputImageCrowd;
 bayes_people_tracker_msgs::PeopleTrackerImage peopleTrackerImages;
 std::mutex personMutex;
 std::mutex imageMutex;
+std::mutex imageMutexCrowd;
 bool visualize;
 bool gender_age = false;
 bool shirt_color = true;
+
+double SITTINGPERCENT = 0.2;
 
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
 
@@ -76,6 +81,25 @@ void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) 
     personMutex.lock();
     peopleTrackerImages = msg;
     personMutex.unlock();
+}
+
+
+void imageCb(const sensor_msgs::ImageConstPtr &msg) {
+    cv_bridge::CvImagePtr cvBridge;
+    try {
+        cvBridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception &e) {
+        ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
+        return;
+    }
+    imageMutexCrowd.lock();
+    inputImageCrowd = cvBridge->image;
+    if (visualize) {
+        cv::imshow("input", inputImageCrowd);
+        cv::waitKey(3);
+    }
+    imageMutexCrowd.unlock();
 }
 
 bool getImageByUuid(std::string id) {
@@ -108,12 +132,117 @@ bool getImageByUuid(std::string id) {
 }
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
-    imageMutex.lock();
-    for(int i = 0; i < peopleTrackerImages.trackedPeopleImg.size(); i++){
-        res.personId.push_back(peopleTrackerImages.trackedPeopleImg.at(i).uuid);
-        res.attributes.push_back(getAttributes(peopleTrackerImages.trackedPeopleImg.at(i).uuid));
+
+    op::Array<float> netInputArray;
+    std::vector<float> scaleRatios;
+    op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
+    ROS_INFO("Converting cv image to openpose array.");
+    ROS_INFO("Im cols %d, im rows %d", inputImageCrowd.cols, inputImageCrowd.rows);
+    std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImageCrowd);
+    ROS_INFO("Detect poses using forward pass.");
+    poseExtractor->forwardPass(netInputArray, {inputImageCrowd.cols, inputImageCrowd.rows}, scaleRatios);
+    const auto poseKeypoints = poseExtractor->getPoseKeypoints();
+
+    gender_and_age_msgs::GenderAndAgeService srv;
+    std::vector<std::string> shirt_list;
+    std::vector<openpose_ros_msgs::PersonDetection> person_list;
+    ROS_INFO("Extracted %d people.", poseKeypoints.getSize(0));
+
+    for (size_t i = 0; i < poseKeypoints.getSize(0); ++i) {
+        openpose_ros_msgs::PersonDetection person = initPersonDetection();
+        for (size_t j = 0; j < poseKeypoints.getSize(1); ++j) {
+            size_t bodypart_id = 3 * (i * poseKeypoints.getSize(1) + j);
+            openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
+            bodypart.confidence = poseKeypoints[bodypart_id + 2];
+            int u = poseKeypoints[bodypart_id];
+            int v = poseKeypoints[bodypart_id + 1];
+
+            bodypart.u = u;
+            bodypart.v = v;
+
+            ROS_INFO("u: %d, v: %d", u, v);
+
+            std::string bodypart_name = cocoBodyParts[j];
+
+            ROS_INFO("BodyPartName: %s", bodypart_name.c_str());
+            ROS_INFO("Confidence: %f", bodypart.confidence);
+
+            if (bodypart_name == "Nose") person.Nose = bodypart;
+            else if (bodypart_name == "Neck") person.Neck = bodypart;
+            else if (bodypart_name == "RShoulder") person.RShoulder = bodypart;
+            else if (bodypart_name == "RElbow") person.RElbow = bodypart;
+            else if (bodypart_name == "RWrist") person.RWrist = bodypart;
+            else if (bodypart_name == "LShoulder") person.LShoulder = bodypart;
+            else if (bodypart_name == "LElbow") person.LElbow = bodypart;
+            else if (bodypart_name == "LWrist") person.LWrist = bodypart;
+            else if (bodypart_name == "RHip") person.RHip = bodypart;
+            else if (bodypart_name == "RKnee") person.RKnee = bodypart;
+            else if (bodypart_name == "RAnkle") person.RAnkle = bodypart;
+            else if (bodypart_name == "LHip") person.LHip = bodypart;
+            else if (bodypart_name == "LKnee") person.LKnee = bodypart;
+            else if (bodypart_name == "LAnkle") person.LAnkle = bodypart;
+            else if (bodypart_name == "REye") person.REye = bodypart;
+            else if (bodypart_name == "LEye") person.LEye = bodypart;
+            else if (bodypart_name == "REar") person.REar = bodypart;
+            else if (bodypart_name == "LEar") person.LEar = bodypart;
+            else if (bodypart_name == "Chest") person.Chest = bodypart;
+            else {
+                ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
+                bodypart_name.c_str());
+            }
+        }
+
+        if(gender_age) {
+
+            printf ("Gender and age is ON");
+            int crop_x, crop_y, crop_width, crop_height;
+            getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, inputImageCrowd);
+
+            cv::Rect roi;
+            roi.x = crop_x;
+            roi.y = crop_y;
+            roi.width = crop_width;
+            roi.height = crop_height;
+            cv::Mat crop = inputImageCrowd(roi);
+            sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+            srv.request.objects.push_back(*inputImage_msg);
+
+        }
+        if(shirt_color) {
+                printf("Shirt detection is ON \n");
+                try{
+                        shirt_list.push_back(getShirtColor(person, inputImageCrowd));
+                } catch (cv::Exception e) {
+
+                        std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
+                }
+        }
+
+        person_list.push_back(person);
     }
-    imageMutex.unlock();
+
+    if(gender_age) {
+        face_client_ptr.get()->call(srv);
+        ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
+        ROS_INFO("personsize: %u",(int)person_list.size());
+        for (size_t i = 0; i < person_list.size(); ++i) {
+                person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+                person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+        }
+    }
+    if(shirt_color) {
+        for (int i = 0; i < shirt_list.size(); i++)	{
+                std::string shirtcolor = shirt_list[i];
+                ROS_INFO ("color person %d: %s, ", i, shirtcolor.c_str());
+                printf("\n");
+
+                person_list.at(i).shirtcolor = shirtcolor;
+        }
+    }
+    for(int i = 0; i < person_list.size(); i++) {
+        openpose_ros_msgs::PersonAttributes attributes = getPersonAttributes(person_list.at(i));
+        res.attributes.push_back(attributes);
+    }
     return true;
 }
 
@@ -272,22 +401,54 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
     return attributes;
 }
 
+double calcAngle(cv::Point p1, cv::Point p2) {
+    return std::abs(atan2(p1.y - p2.y, p1.x - p2.x) * 180 / PI);
+}
+
 openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::PersonDetection person) {
     openpose_ros_msgs::PersonAttributes attributes;
     attributes.gender_hyp = person.gender_hyp;
     attributes.age_hyp = person.age_hyp;
     attributes.shirtcolor = person.shirtcolor;
-    attributes.posture = STANDING;
-    if(person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
-            attributes.gesture = RAISING_RIGHT_ARM;
-    } else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
-        attributes.gesture = RAISING_LEFT_ARM;
-    } else if ((person.LWrist.v < person.LShoulder.v && person.LWrist.v > 0 && person.LShoulder.v > 0) ||
-               (person.RWrist.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0)) {
-        attributes.gesture = WAVING;
-    } else {
-        attributes.gesture = NEUTRAL;
+
+    cv::Point LWrist = cv::Point(person.LWrist.u, person.LWrist.v);
+    cv::Point LShoulder = cv::Point(person.LShoulder.u, person.LShoulder.v);
+    cv::Point LHip = cv::Point(person.LHip.u, person.LHip.v);
+    cv::Point LKnee = cv::Point(person.LKnee.u, person.LKnee.v);
+    cv::Point LAnkle = cv::Point(person.LAnkle.u, person.LAnkle.v);
+
+    cv::Point RWrist = cv::Point(person.RWrist.u, person.RWrist.v);
+    cv::Point RShoulder = cv::Point(person.RShoulder.u, person.RShoulder.v);
+    cv::Point RHip = cv::Point(person.RHip.u, person.RHip.v);
+    cv::Point RKnee = cv::Point(person.RKnee.u, person.RKnee.v);
+    cv::Point RAnkle = cv::Point(person.RAnkle.u, person.RAnkle.v);
+
+    double Vertical = calcAngle(cv::Point(50, 10), cv::Point(50, 50));
+    double Horizontal = calcAngle(cv::Point(10, 50), cv::Point(50, 50));
+
+    double LWristLShoulderAngle = calcAngle(LWrist, LShoulder);
+    double LHipLShoulderAngle = calcAngle(LHip, LShoulder);
+    double LAnkleLShoulderAngle = calcAngle(LAnkle, LShoulder);
+
+    double RWristRShoulderAngle = calcAngle(RWrist, RShoulder);
+    double RHipRShoulderAngle = calcAngle(RHip, RShoulder);
+    double RAnkleRShoulderAngle = calcAngle(RAnkle, RShoulder);
+
+    double LKneeLHipDist = sqrt(pow(LKnee.y - LHip.y , 2));
+    double LAnkleLHipDist = sqrt(pow(LAnkle.y - LHip.y , 2));
+    double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
+    double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
+
+    if(std::abs(LAnkleLShoulderAngle - Vertical) < std::abs(LAnkleLShoulderAngle - Horizontal) ||
+            std::abs(RAnkleRShoulderAngle - Vertical) < std::abs(RAnkleRShoulderAngle - Horizontal)) {
+        attributes.posture = LYING;
+    } else if(LKneeLHipDist < LAnkleLHipDist * SITTINGPERCENT && RKneeRHipDist < RAnkleRHipDist * SITTINGPERCENT) {
+        attributes.posture = SITTING;
     }
+
+    attributes.posture = STANDING;
+    attributes.gesture = NEUTRAL;
+
     return attributes;
 }
 
@@ -369,6 +530,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 					cropy = person.LHip.v - cropheight;
 				}
 			}
+
 		} else {
 			if (person.RHip.confidence > 0)	{
 				if (person.RShoulder.confidence > 0)	{
@@ -559,6 +721,7 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
 }
 
 int main(int argc, char **argv) {
+
     ros::init(argc, argv, "detect_people_server");
 
     ros::NodeHandle localNH("~");
@@ -571,6 +734,8 @@ int main(int argc, char **argv) {
     localNH.param("person_attribute_service_topic", personAttServTopic, personAttServTopic);
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
+    std::string imageTopic = "/pepper_robot/camera/front/image_raw";
+    localNH.param("image_topic", imageTopic, imageTopic);
 
     int netInputSizeWidth;
     localNH.param("net_input_size_width", netInputSizeWidth, 320);
@@ -614,10 +779,13 @@ int main(int argc, char **argv) {
     ros::NodeHandle n;
     //advertise service to get detected people poses
     ros::ServiceServer servicePerson = n.advertiseService(personAttServTopic, getPersonAttributesCb);
+
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
 
     //subscriber to recieve extended person message
     ros::Subscriber extendedPeopleSub = n.subscribe(extendedPeopleTopic, 100, peopleExtendedCb);
+
+    ros::Subscriber imageSub = n.subscribe(imageTopic, 100, imageCb);
 
     //rosservice for age and gender detection
     if(ros::service::exists("gender_and_age",false)) {
