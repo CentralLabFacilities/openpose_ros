@@ -744,7 +744,7 @@ int main(int argc, char **argv) {
     localNH.param("person_attribute_service_topic", personAttServTopic, personAttServTopic);
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
-    std::string imageTopic = "/pepper_robot/camera/front/image_raw";
+    std::string imageTopic = "/pepper_robot/sink/front/image_raw";
     localNH.param("image_topic", imageTopic, imageTopic);
 
     int netInputSizeWidth;
