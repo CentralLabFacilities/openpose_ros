@@ -137,6 +137,9 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
     std::vector<float> scaleRatios;
     op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
     ROS_INFO("Converting cv image to openpose array.");
+    std::cout << "ASDASD" << std::endl;
+
+    inputImageCrowd = cv::imread("/home/kkonen/test.png");
     ROS_INFO("Im cols %d, im rows %d", inputImageCrowd.cols, inputImageCrowd.rows);
     std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImageCrowd);
     ROS_INFO("Detect poses using forward pass.");
@@ -267,20 +270,6 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
         ROS_INFO("Detect poses using forward pass.");
         poseExtractor->forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
         const auto poseKeypoints = poseExtractor->getPoseKeypoints();
-
-//        if (visualize) {
-//            op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, true, (float) 0.6};
-//            op::OpOutputToCvMat opOutputToCvMat{outputSize};
-//            double scaleInputToOutput;
-//            op::Array<float> outputArray;
-//            op::CvMatToOpOutput cvMatToOpOutput{outputSize};
-//            std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
-//            poseRenderer.renderPose(outputArray, poseKeypoints);
-//            auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
-
-//            cv::imshow("Detections", outputImage);
-//            cv::waitKey(3);
-//        }
 
         gender_and_age_msgs::GenderAndAgeService srv;
 
@@ -578,7 +567,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	}
 
 
-	printf ("#1: person.RShoulder.v: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);	
+    printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
 	printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
 
 
@@ -596,10 +585,9 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	roi.height = cropheight;
 
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
-        cv::Mat crop_img = inputImage(roi); // todo: no hips or shoulders
-        //cv::imshow("shirtColor", crop_img);
-
-	//cv::waitKey(0);
+    cv::Mat crop_img = image(roi); // todo: no hips or shoulders
+    cv::imshow("shirtColor", crop_img);
+    cv::waitKey(0);
 	//------HSV------
 	
 	cv::Mat hsv_crop_img;
@@ -609,8 +597,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	cv::split(hsv_crop_img, hsv_planes);
 
 	cv::Mat h = hsv_planes[0]; // H channel
-    	cv::Mat s = hsv_planes[1]; // S channel
-    	cv::Mat v = hsv_planes[2]; // V channel
+    cv::Mat s = hsv_planes[1]; // S channel
+    cv::Mat v = hsv_planes[2]; // V channel
 
 
 	int red, orange, yellow, green, blue, purple, black, white, grey, pixel;
@@ -636,7 +624,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 			}
 			if (v_pixel <= 40)	{ black++;}
-			//if (v_pixel >= 60)	{ white++;}
+            if (v_pixel >= 60)	{ white++;}
 			if ((v_pixel >= 30) && (v_pixel <= 70)) { grey++;}
 		}
 	}
@@ -663,13 +651,13 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	switch(dominant_color_index) {
     		case 0 : return "red";
     		case 1 : return "orange";
-		case 2 : return "yellow";
-		case 3 : return "green";
-		case 4 : return "blue";
-		case 5 : return "purple";
-		case 6 : return "black";
-		case 7 : return "white";
-		case 8 : return "grey";
+            case 2 : return "yellow";
+            case 3 : return "green";
+            case 4 : return "blue";
+            case 5 : return "purple";
+            case 6 : return "black";
+            case 7 : return "white";
+            case 8 : return "grey";
 	}
 
 	return "no color";
