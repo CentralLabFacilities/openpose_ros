@@ -588,8 +588,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     //------HSV------
     cv::Mat hsv_crop_img;
     cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
-    cv::imshow("shirtColor", crop_img);
-    cv::waitKey(0);
+//    cv::imshow("shirtColor", crop_img);
+//    cv::waitKey(0);
     cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
     std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
@@ -597,9 +597,9 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
     if ( mean_color[2] > 220 )
         return "white";
-    if ( mean_color[2] < 45 )
+    if ( mean_color[2] < 60 )
         return "black";
-    if ( mean_color[1] <  45 )
+    if ( mean_color[1] <  60 )
         return "grey";
     if( mean_color[0] < 8  || mean_color[0] >= 170 )
         return "red";
@@ -609,9 +609,9 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         return "yellow";
     if( 35 <= mean_color[0] && mean_color[0] < 80 )
         return "green";
-    if( 80 <=  mean_color[0] && mean_color[0] < 100 )
+    if( 80 <=  mean_color[0] && mean_color[0] < 90 )
         return "cyan";
-    if( 100 <= mean_color[0]  && mean_color[0] < 130 )
+    if( 90 <= mean_color[0]  && mean_color[0] < 130 )
         return "blue";
     if( 130 <= mean_color[0]  && mean_color[0] < 170 )
         return "purple";
