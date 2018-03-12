@@ -135,6 +135,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
     imageMutexCrowd.lock();
     op::Array<float> netInputArray;
     std::vector<float> scaleRatios;
+    inputImageCrowd = cv::imread("/home/kkonen/test.png");
     op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
     ROS_INFO("Converting cv image to openpose array.");
     ROS_INFO("Im cols %d, im rows %d", inputImageCrowd.cols, inputImageCrowd.rows);
@@ -583,36 +584,38 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
     cv::Mat crop_img = image(roi); // todo: no hips or shoulders
-//    cv::imshow("shirtColor", crop_img);
-//    cv::waitKey(0);
+
 
     //------HSV------
-	    cv::Mat hsv_crop_img;
+    cv::Mat hsv_crop_img;
     cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
-	
+    cv::imshow("shirtColor", crop_img);
+    cv::waitKey(0);
     cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
-    std::cout << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl;
+    std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
 
 
     if ( mean_color[2] > 220 )
         return "white";
-    if ( mean_color[2] < 30 )
+    if ( mean_color[2] < 45 )
         return "black";
-    if ( mean_color[1] <  30 )
+    if ( mean_color[1] <  45 )
         return "grey";
-    if( mean_color[0] < 30 )
+    if( mean_color[0] < 8  || mean_color[0] >= 170 )
         return "red";
-    if( 30 <= mean_color[0]  && mean_color[0] < 60 )
+    if( 8 <= mean_color[0]  && mean_color[0] < 17.5 )
+        return "orange";
+    if( 17.5 <= mean_color[0]  && mean_color[0] < 35)
         return "yellow";
-    if( 60 <= mean_color[0] && mean_color[0] < 90 )
+    if( 35 <= mean_color[0] && mean_color[0] < 80 )
         return "green";
-    if( 90 <=  mean_color[0] && mean_color[0] < 120 )
+    if( 80 <=  mean_color[0] && mean_color[0] < 100 )
         return "cyan";
-    if( 120 <= mean_color[0]  && mean_color[0] < 150 )
+    if( 100 <= mean_color[0]  && mean_color[0] < 130 )
         return "blue";
-    if( 150 <= mean_color[0]  && mean_color[0] < 180 )
-        return "magenta";
+    if( 130 <= mean_color[0]  && mean_color[0] < 170 )
+        return "purple";
 
 //	switch(dominant_color_index) {
 //    		case 0 : return "red";
