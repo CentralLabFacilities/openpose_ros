@@ -585,77 +585,46 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     cv::Mat crop_img = image(roi); // todo: no hips or shoulders
 //    cv::imshow("shirtColor", crop_img);
 //    cv::waitKey(0);
-	//------HSV------
+
+    //------HSV------
+	    cv::Mat hsv_crop_img;
+    cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
 	
-	cv::Mat hsv_crop_img;
-	cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
-	
-	std::vector<cv::Mat> hsv_planes;
-	cv::split(hsv_crop_img, hsv_planes);
+    cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
-	cv::Mat h = hsv_planes[0]; // H channel
-    cv::Mat s = hsv_planes[1]; // S channel
-    cv::Mat v = hsv_planes[2]; // V channel
+    std::cout << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl;
 
 
-	int red, orange, yellow, green, blue, purple, black, white, grey, pixel;
-	red = orange = yellow = green = blue = purple = black = white = grey = pixel = 0;
+    if ( mean_color[2] > 220 )
+        return "white";
+    if ( mean_color[2] < 30 )
+        return "black";
+    if ( mean_color[1] <  30 )
+        return "grey";
+    if( mean_color[0] < 30 )
+        return "red";
+    if( 30 <= mean_color[0]  && mean_color[0] < 60 )
+        return "yellow";
+    if( 60 <= mean_color[0] && mean_color[0] < 90 )
+        return "green";
+    if( 90 <=  mean_color[0] && mean_color[0] < 120 )
+        return "cyan";
+    if( 120 <= mean_color[0]  && mean_color[0] < 150 )
+        return "blue";
+    if( 150 <= mean_color[0]  && mean_color[0] < 180 )
+        return "magenta";
 
-	uchar h_pixel;
-	uchar s_pixel;
-	uchar v_pixel;
-	for(int i=0; i<hsv_crop_img.rows; i++)	{
-    		for(int j=0; j<hsv_crop_img.cols; j++)	{
-        		h_pixel = h.at<uchar>(i, j);
-			s_pixel = s.at<uchar>(i, j);
-			v_pixel = v.at<uchar>(i, j);
-
-			pixel++;
-			if (s_pixel >= 40)	{
-				if (((h_pixel >= 0) && (h_pixel <= 10)) || ((h_pixel <= 180 ) && (h_pixel >=165))) { red++;}
-				if ((h_pixel >= 7) && (h_pixel <= 22)) { orange++;  }
-				if ((h_pixel >= 15) && (h_pixel <= 45))	 { yellow++; }
-				if ((h_pixel >= 30) && (h_pixel <= 83))	 { green++; }
-				if ((h_pixel >= 75) && (h_pixel <= 135)) { blue++; }
-				if ((h_pixel >= 123) && (h_pixel <= 172)) { purple++; }
-
-			}
-			if (v_pixel <= 40)	{ black++;}
-//            if (v_pixel >= 60)	{ white++;}
-			if ((v_pixel >= 30) && (v_pixel <= 70)) { grey++;}
-		}
-	}
-	int color_array[9] = {red,orange,yellow,green,blue,purple,black,white,grey};	
-	
-/**
-	printf ("pixel: %d \n", pixel);
-	printf ("red: %d \n", color_array[0]);
-	printf ("orange: %d \n", color_array[1]);
-	printf ("yellow: %d \n", color_array[2]);
-	printf ("green: %d \n", color_array[3]);
-	printf ("blue: %d \n", color_array[4]);
-	printf ("purple: %d \n", color_array[5]);
-	printf ("black: %d \n", color_array[6]);
-	printf ("white: %d \n", color_array[7]);
-	printf ("grey: %d \n", color_array[8]); */
-	
-	int max_color = *std::max_element(color_array,color_array+9);
-	int dominant_color_index;
-	for(int k = 0; k < 8; k++)	{
-		if (max_color == color_array[k])	{dominant_color_index = k;}	
-	}
-	
-	switch(dominant_color_index) {
-    		case 0 : return "red";
-    		case 1 : return "orange";
-            case 2 : return "yellow";
-            case 3 : return "green";
-            case 4 : return "blue";
-            case 5 : return "purple";
-            case 6 : return "black";
-            case 7 : return "white";
-            case 8 : return "grey";
-	}
+//	switch(dominant_color_index) {
+//    		case 0 : return "red";
+//    		case 1 : return "orange";
+//            case 2 : return "yellow";
+//            case 3 : return "green";
+//            case 4 : return "blue";
+//            case 5 : return "purple";
+//            case 6 : return "black";
+//            case 7 : return "white";
+//            case 8 : return "grey";
+//	}
 
 	return "no color";
 }
