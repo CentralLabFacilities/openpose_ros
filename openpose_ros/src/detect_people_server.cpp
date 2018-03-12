@@ -135,7 +135,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
     imageMutexCrowd.lock();
     op::Array<float> netInputArray;
     std::vector<float> scaleRatios;
-    inputImageCrowd = cv::imread("/home/kkonen/test.png");
     op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
     ROS_INFO("Converting cv image to openpose array.");
     ROS_INFO("Im cols %d, im rows %d", inputImageCrowd.cols, inputImageCrowd.rows);
