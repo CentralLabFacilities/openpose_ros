@@ -137,9 +137,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
     std::vector<float> scaleRatios;
     op::CvMatToOpInput cvMatToOpInput{netInputSize, scaleNumber, (float) scaleGap};
     ROS_INFO("Converting cv image to openpose array.");
-    std::cout << "ASDASD" << std::endl;
-
-    inputImageCrowd = cv::imread("/home/kkonen/test.png");
     ROS_INFO("Im cols %d, im rows %d", inputImageCrowd.cols, inputImageCrowd.rows);
     std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImageCrowd);
     ROS_INFO("Detect poses using forward pass.");
