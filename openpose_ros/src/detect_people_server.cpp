@@ -621,7 +621,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 			}
 			if (v_pixel <= 40)	{ black++;}
-            if (v_pixel >= 60)	{ white++;}
+//            if (v_pixel >= 60)	{ white++;}
 			if ((v_pixel >= 30) && (v_pixel <= 70)) { grey++;}
 		}
 	}
