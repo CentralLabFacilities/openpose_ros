@@ -595,7 +595,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
 
 
-    if ( mean_color[2] > 220 )
+    if ( mean_color[2] > 245 )
         return "white";
     if ( mean_color[2] < 60 )
         return "black";
