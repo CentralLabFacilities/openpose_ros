@@ -56,7 +56,7 @@ bool visualize;
 bool gender_age = false;
 bool shirt_color = true;
 
-double SITTINGPERCENT = 0.2;
+double SITTINGPERCENT = 0.4;
 
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
 
@@ -435,12 +435,11 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
     std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
 
-
-    if(std::abs(LHipLAnkleAngle - Horizontal) < std::abs(LHipLAnkleAngle - Vertical) ||
-            std::abs(RHipRAnkleAngle - Horizontal) < std::abs(RHipRAnkleAngle - Vertical)) {
-        attributes.posture = LYING;
-    } else if(LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) && RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) ) {
-        attributes.posture = SITTING;
+    if(LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) && RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) ) {
+            attributes.posture = SITTING;
+    } else if(std::abs(LHipLAnkleAngle - Horizontal) < std::abs(LHipLAnkleAngle - Vertical) ||
+               std::abs(RHipRAnkleAngle - Horizontal) < std::abs(RHipRAnkleAngle - Vertical)) {
+           attributes.posture = LYING;
     } else {
         attributes.posture = STANDING;
     }
