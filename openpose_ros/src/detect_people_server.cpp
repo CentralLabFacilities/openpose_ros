@@ -408,8 +408,8 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     cv::Point RKnee = cv::Point(person.RKnee.u, person.RKnee.v);
     cv::Point RAnkle = cv::Point(person.RAnkle.u, person.RAnkle.v);
 
-    double Vertical = calcAngle(cv::Point(50, 10), cv::Point(50, 50));
-    double Horizontal = calcAngle(cv::Point(10, 50), cv::Point(50, 50));
+    double Vertical = 90;
+    double Horizontal = 180;
 
     double LWristLShoulderAngle = calcAngle(LWrist, LShoulder);
     double LHipLShoulderAngle = calcAngle(LHip, LShoulder);
@@ -438,7 +438,8 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     if(LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) && RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) ) {
             attributes.posture = SITTING;
     } else if(std::abs(LHipLAnkleAngle - Horizontal) < std::abs(LHipLAnkleAngle - Vertical) ||
-               std::abs(RHipRAnkleAngle - Horizontal) < std::abs(RHipRAnkleAngle - Vertical)) {
+              std::abs(RHipRAnkleAngle - Horizontal) < std::abs(RHipRAnkleAngle - Vertical) ||
+              LHipLAnkleAngle < 45 || RHipRAnkleAngle < 45) {
            attributes.posture = LYING;
     } else {
         attributes.posture = STANDING;
