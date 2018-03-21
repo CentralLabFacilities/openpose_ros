@@ -436,8 +436,8 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
 
 
-    if(std::abs(LHipLAnkleAngle - Vertical) < std::abs(LHipLAnkleAngle - Horizontal) ||
-            std::abs(RHipRAnkleAngle - Vertical) < std::abs(RHipRAnkleAngle - Horizontal)) {
+    if(std::abs(LHipLAnkleAngle - Horizontal) < std::abs(LHipLAnkleAngle - Vertical) ||
+            std::abs(RHipRAnkleAngle - Horizontal) < std::abs(RHipRAnkleAngle - Vertical)) {
         attributes.posture = LYING;
     } else if(LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) && RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) ) {
         attributes.posture = SITTING;
