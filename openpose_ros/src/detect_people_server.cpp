@@ -764,6 +764,14 @@ int main(int argc, char **argv) {
 
     ros::Subscriber imageSub = n.subscribe(imageTopic, 100, imageCb);
 
+    //rosservice for age and gender detection
+    if(ros::service::exists("clf_gender_age_classify_array",false)) {
+        ROS_INFO("gender and age classify service exists.");
+        gender_age = true;
+        face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
+    }
+
+
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
 
