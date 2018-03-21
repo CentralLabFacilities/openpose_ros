@@ -420,7 +420,7 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
 
     double RWristRShoulderAngle = calcAngle(RWrist, RShoulder);
     double RHipRShoulderAngle = calcAngle(RHip, RShoulder);
-    double RHipRAnkleAngle = calcAngle(RHip, RShoulder);
+    double RHipRAnkleAngle = calcAngle(RHip, RAnkle);
     double RAnkleRShoulderAngle = calcAngle(RAnkle, RShoulder);
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
