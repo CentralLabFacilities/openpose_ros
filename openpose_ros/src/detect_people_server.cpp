@@ -760,9 +760,9 @@ int main(int argc, char **argv) {
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
 
     //subscriber to recieve extended person message
-    ros::Subscriber extendedPeopleSub = n.subscribe(extendedPeopleTopic, 100, peopleExtendedCb);
+    ros::Subscriber extendedPeopleSub = n.subscribe(extendedPeopleTopic, 5, peopleExtendedCb);
 
-    ros::Subscriber imageSub = n.subscribe(imageTopic, 100, imageCb);
+    ros::Subscriber imageSub = n.subscribe(imageTopic, 5, imageCb);
 
     //rosservice for age and gender detection
     if(ros::service::exists("clf_gender_age_classify_array",false)) {
