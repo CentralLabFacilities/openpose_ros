@@ -76,11 +76,6 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
 
-cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
-
-cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
-
-
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
     person_mutex.lock();
@@ -776,6 +771,10 @@ int main(int argc, char **argv) {
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
     }
 
+    if (visualize) {
+        cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
+        cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
+    }
 
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
