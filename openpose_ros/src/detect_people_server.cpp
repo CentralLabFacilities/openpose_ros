@@ -37,7 +37,6 @@ enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISIN
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
 
 
-
 std::shared_ptr <op::PoseExtractor> pose_extractor;
 op::PoseModel pose_model;
 op::Point<int> net_input_size;
@@ -95,7 +94,8 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     image_mutex_crowd.lock();
     input_image_crowd = cv_bridge->image;
     if (visualize) {
-        cv::imshow("openpose_crowd", input_image_crowd);
+        cv::imshow("CLF OpenPose", input_image_crowd);
+        cv::resizeWindow("CLF OpenPose", 320, 240);
         cv::waitKey(3);
     }
     image_mutex_crowd.unlock();
@@ -117,7 +117,8 @@ bool getImageByUuid(std::string id) {
             }
             input_image = cv_bridge->image;
             if (visualize) {
-                cv::imshow("openpose_person", input_image);
+                cv::imshow("CLF OpenPose", input_image);
+                cv::resizeWindow("CLF OpenPose", 320, 240);
                 cv::waitKey(3);
             }
             person_mutex.unlock();
@@ -599,8 +600,6 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     //------HSV------
     cv::Mat hsv_crop_img;
     cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
-//    cv::imshow("shirtColor", crop_img);
-//    cv::waitKey(0);
     cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
     std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
