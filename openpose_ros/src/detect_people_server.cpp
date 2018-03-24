@@ -75,6 +75,13 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
+if (visualize)
+cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
+
+if (visualize)
+cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
+
+
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
     person_mutex.lock();
@@ -94,8 +101,8 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     image_mutex_crowd.lock();
     input_image_crowd = cv_bridge->image;
     if (visualize) {
-        cv::imshow("CLF OpenPose", input_image_crowd);
-        cv::resizeWindow("CLF OpenPose", 320, 240);
+        cv::imshow("CLF OpenPose | Crowd", input_image_crowd);
+        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
         cv::waitKey(3);
     }
     image_mutex_crowd.unlock();
@@ -117,8 +124,8 @@ bool getImageByUuid(std::string id) {
             }
             input_image = cv_bridge->image;
             if (visualize) {
-                cv::imshow("CLF OpenPose", input_image);
-                cv::resizeWindow("CLF OpenPose", 320, 240);
+                cv::imshow("CLF OpenPose | Crowd UUID", input_image);
+                cv::resizeWindow("CLF OpenPose | Crowd UUID", 320, 240);
                 cv::waitKey(3);
             }
             person_mutex.unlock();
