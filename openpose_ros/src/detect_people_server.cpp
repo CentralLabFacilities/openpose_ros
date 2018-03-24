@@ -75,10 +75,9 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
-if (visualize)
+
 cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
 
-if (visualize)
 cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
 
 
