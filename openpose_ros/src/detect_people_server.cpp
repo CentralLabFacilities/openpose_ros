@@ -36,7 +36,6 @@
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
 
-
 std::shared_ptr <op::PoseExtractor> pose_extractor;
 op::PoseModel pose_model;
 op::Point<int> net_input_size;
@@ -52,29 +51,19 @@ std::mutex person_mutex;
 std::mutex image_mutex;
 std::mutex image_mutex_crowd;
 bool visualize;
+bool visualize_uuid;
 bool gender_age = false;
 bool shirt_color = true;
-
 double SITTINGPERCENT = 0.4;
-
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
-
 openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::PersonDetection person);
-
 openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid);
-
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
-
 openpose_ros_msgs::PersonDetection initPersonDetection();
-
 bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res);
-
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res);
-
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
-
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
-
 
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
@@ -117,7 +106,7 @@ bool getImageByUuid(std::string id) {
                 return false;
             }
             input_image = cv_bridge->image;
-            if (visualize) {
+            if (visualize_uuid) {
                 cv::imshow("CLF OpenPose | Crowd UUID", input_image);
                 cv::resizeWindow("CLF OpenPose | Crowd UUID", 320, 240);
                 cv::waitKey(3);
@@ -194,11 +183,9 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         }
 
         if(gender_age) {
-
             printf ("Gender and age is ON");
             int crop_x, crop_y, crop_width, crop_height;
             getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image_crowd);
-
             cv::Rect roi;
             roi.x = crop_x;
             roi.y = crop_y;
@@ -207,7 +194,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
             cv::Mat crop = input_image_crowd(roi);
             sensor_msgs::ImagePtr input_image_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
             srv.request.objects.push_back(*input_image_msg);
-
         }
         if(shirt_color) {
                 printf("Shirt detection is ON \n");
@@ -252,8 +238,6 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
     ROS_INFO("Called GetAttributes service.");
     res.attributes = getAttributes(req.personId);
     image_mutex.unlock();
-//    if(res.attributes.posture == 0 && res.attributes.gesture = 0)
-//        return false;
     return true;
 }
 
@@ -330,9 +314,7 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
                 confidence = 0;
             }
 
-
             if(gender_age) {
-
                 printf ("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
                 getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image);
@@ -345,7 +327,6 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
                 cv::Mat crop = input_image(roi);
                 sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
                 srv.request.objects.push_back(*inputImage_msg);
-
             }
             if(shirt_color) {
                     printf("Shirt detection is ON \n");
@@ -360,8 +341,6 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
             person_list.push_back(person);
         }
 
-
-
         if(gender_age) {
             face_client_ptr.get()->call(srv);
             ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
@@ -369,8 +348,6 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
             for (size_t i = 0; i < person_list.size(); ++i) {
                     person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
                     person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
-
-
             }
         }
         if(shirt_color) {
@@ -427,7 +404,6 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
 
-
     std::cout << "LHipLAnkleAngle: " << LHipLAnkleAngle << std::endl;
     std::cout << "RHipRAnkleAngle: " << RHipRAnkleAngle << std::endl;
     std::cout << "Vertical: " << Vertical << std::endl;
@@ -461,7 +437,6 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     return attributes;
 }
 
-
 openpose_ros_msgs::PersonDetection initPersonDetection() {
     openpose_ros_msgs::PersonDetection person;
     person.Nose = initBodyPartDetection();
@@ -485,7 +460,6 @@ openpose_ros_msgs::PersonDetection initPersonDetection() {
     person.Chest = initBodyPartDetection();
     return person;
 }
-
 
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image)	{
 	printf ("getShirtColor() \n");
@@ -576,10 +550,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 		}
 	}
 
-
-    printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
+    	printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
 	printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
-
 
 	if (cropx + cropwidth >= image.size().width) { cropwidth = cropwidth - std::abs((cropx + cropwidth) - image.size().width); }
 	if (cropy + cropheight >= image.size().height) { cropheight = cropheight - std::abs((cropy + cropheight) - image.size().height); }
@@ -595,7 +567,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	roi.height = cropheight;
 
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
-    cv::Mat crop_img = image(roi); // todo: no hips or shoulders
+    	cv::Mat crop_img = image(roi); // todo: no hips or shoulders
 
 
     //------HSV------
@@ -628,8 +600,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         return "purple";
 
 //	switch(dominant_color_index) {
-//    		case 0 : return "red";
-//    		case 1 : return "orange";
+//    	      case 0 : return "red";
+//    	      case 1 : return "orange";
 //            case 2 : return "yellow";
 //            case 3 : return "green";
 //            case 4 : return "blue";
@@ -641,8 +613,6 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 	return "no color";
 }
-
-
 
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
     printf ("getHeadBounds()");
@@ -703,8 +673,6 @@ int main(int argc, char **argv) {
 
     ros::NodeHandle localNH("~");
 
-    //read in params
-
     std::string extendedPeopleTopic = "/people_tracker/people/extended";
     localNH.param("extended_people_topic", extendedPeopleTopic, extendedPeopleTopic);
     std::string personAttServTopic = "/open_pose/get_person_attributes";
@@ -746,6 +714,7 @@ int main(int argc, char **argv) {
     coco_body_parts = op::POSE_COCO_BODY_PARTS;
 
     localNH.param("visualize", visualize, true);
+    localNH.param("visualize_uuid", visualize_uuid, false);
 
     //init openpose
     pose_extractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(net_input_size, net_output_size,
@@ -773,8 +742,11 @@ int main(int argc, char **argv) {
 
     if (visualize) {
         cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
-        cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
     }
+
+    if (visualize_uuid) {
+        cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
+    }	
 
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
