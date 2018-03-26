@@ -415,8 +415,6 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
 
     std::cout << "LHipLAnkleAngle: " << LHipLAnkleAngle << std::endl;
     std::cout << "RHipRAnkleAngle: " << RHipRAnkleAngle << std::endl;
-    std::cout << "Vertical: " << Vertical << std::endl;
-    std::cout << "Horizontal: " << Horizontal << std::endl;
     std::cout << "LKneeLHipDist: " << LKneeLHipDist << std::endl;
     std::cout << "LAnkleLHipDist * SittingPercent: " << LAnkleLHipDist * SITTINGPERCENT << std::endl;
     std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
@@ -442,7 +440,8 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
     } else {
         attributes.gesture = NEUTRAL;
 }
-
+    std::cout << "Gesture: \t" << attributes.gesture << std::endl;
+    std::cout << "posture: \t" << attributes.posture << std::endl;
     return attributes;
 }
 
