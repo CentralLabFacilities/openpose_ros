@@ -430,16 +430,17 @@ openpose_ros_msgs::PersonAttributes getPersonAttributes(openpose_ros_msgs::Perso
         attributes.posture = STANDING;
     }
 
-    if(person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
-            attributes.gesture = RAISING_RIGHT_ARM;
-    } else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
+    if ((person.LWrist.v < person.LShoulder.v && person.LWrist.v > 0 && person.LShoulder.v > 0) ||
+        (person.RWrist.v < person.RShoulder.v && person.RWrist.v > 0 && person.RShoulder.v > 0)) {
+            attributes.gesture = WAVING;
+    }
+     else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
         attributes.gesture = RAISING_LEFT_ARM;
-    } else if ((person.LWrist.v < person.LShoulder.v && person.LWrist.v > 0 && person.LShoulder.v > 0) ||
-               (person.RWrist.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0)) {
-        attributes.gesture = WAVING;
+    } else if(person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
+        attributes.gesture = RAISING_RIGHT_ARM;
     } else {
         attributes.gesture = NEUTRAL;
-}
+    }
     std::cout << "Gesture: \t" << attributes.gesture << std::endl;
     std::cout << "posture: \t" << attributes.posture << std::endl;
     return attributes;
