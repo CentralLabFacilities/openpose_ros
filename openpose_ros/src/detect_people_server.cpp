@@ -138,6 +138,12 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     ROS_INFO("Extracted %d people.", pose_key_points.getSize(0));
 
+    if(pose_key_points.getSize(0) == 0) {
+        openpose_ros_msgs::PersonAttributes attributes;
+        res.attributes.push_back(attributes);
+        return true;
+    }
+
     for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
         openpose_ros_msgs::PersonDetection person = initPersonDetection();
         for (size_t j = 0; j < pose_key_points.getSize(1); ++j) {
@@ -251,27 +257,30 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
         std::tie(net_input_array, scale_ratios) = cvMatToOpInput.format(input_image);
         ROS_INFO("Detect poses using forward pass.");
         pose_extractor->forwardPass(net_input_array, {input_image.cols, input_image.rows}, scale_ratios);
-        const auto pose_keypoints = pose_extractor->getPoseKeypoints();
+        const auto pose_key_points = pose_extractor->getPoseKeypoints();
 
         gender_and_age_msgs::GenderAndAgeService srv;
 
         std::vector<std::string> shirt_list;
         std::vector<openpose_ros_msgs::PersonDetection> person_list;
-        ROS_INFO("Extracted %d people.", pose_keypoints.getSize(0));
-
+        ROS_INFO("Extracted %d people.", pose_key_points.getSize(0));
+        if(pose_key_points.getSize(0) == 0) {
+            openpose_ros_msgs::PersonAttributes attributes;
+            return attributes;
+        }
         double best_confidence = 0;
         double confidence = 0;
         int best_confidence_index = 0;
 
-        for (size_t i = 0; i < pose_keypoints.getSize(0); ++i) {
+        for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
             openpose_ros_msgs::PersonDetection person = initPersonDetection();
-            for (size_t j = 0; j < pose_keypoints.getSize(1); ++j) {
-                size_t bodypart_id = 3 * (i * pose_keypoints.getSize(1) + j);
+            for (size_t j = 0; j < pose_key_points.getSize(1); ++j) {
+                size_t bodypart_id = 3 * (i * pose_key_points.getSize(1) + j);
                 openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
-                bodypart.confidence = pose_keypoints[bodypart_id + 2];
+                bodypart.confidence = pose_key_points[bodypart_id + 2];
                 confidence += bodypart.confidence;
-                int u = pose_keypoints[bodypart_id];
-                int v = pose_keypoints[bodypart_id + 1];
+                int u = pose_key_points[bodypart_id];
+                int v = pose_key_points[bodypart_id + 1];
 
                 bodypart.u = u;
                 bodypart.v = v;
@@ -306,7 +315,7 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
                     ROS_ERROR("Detected Bodypart %s not in COCO model. Is openpose running with different model?",
                     bodypart_name.c_str());
                 }
-                confidence = confidence / pose_keypoints.getSize(1);
+                confidence = confidence / pose_key_points.getSize(1);
                 if(confidence > best_confidence) {
                     best_confidence = confidence;
                     best_confidence_index = i;
