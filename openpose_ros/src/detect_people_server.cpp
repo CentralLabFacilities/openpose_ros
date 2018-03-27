@@ -189,17 +189,22 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         }
 
         if(gender_age) {
-            printf ("Gender and age is ON");
-            int crop_x, crop_y, crop_width, crop_height;
-            getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image_crowd);
-            cv::Rect roi;
-            roi.x = crop_x;
-            roi.y = crop_y;
-            roi.width = crop_width;
-            roi.height = crop_height;
-            cv::Mat crop = input_image_crowd(roi);
-            sensor_msgs::ImagePtr input_image_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
-            srv.request.objects.push_back(*input_image_msg);
+            try {
+                printf ("Gender and age is ON");
+                int crop_x, crop_y, crop_width, crop_height;
+                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image);
+
+                cv::Rect roi;
+                roi.x = crop_x;
+                roi.y = crop_y;
+                roi.width = crop_width;
+                roi.height = crop_height;
+                cv::Mat crop = input_image(roi);
+                sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+                srv.request.objects.push_back(*inputImage_msg);
+            } catch (cv::Exception e) {
+                    std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
+            }
         }
         if(shirt_color) {
                 printf("Shirt detection is ON \n");
@@ -324,18 +329,23 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
             }
 
             if(gender_age) {
-                printf ("Gender and age is ON");
-                int crop_x, crop_y, crop_width, crop_height;
-                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image);
+                try {
+                    printf ("Gender and age is ON");
+                    int crop_x, crop_y, crop_width, crop_height;
+                    getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image);
 
-                cv::Rect roi;
-                roi.x = crop_x;
-                roi.y = crop_y;
-                roi.width = crop_width;
-                roi.height = crop_height;
-                cv::Mat crop = input_image(roi);
-                sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
-                srv.request.objects.push_back(*inputImage_msg);
+                    cv::Rect roi;
+                    roi.x = crop_x;
+                    roi.y = crop_y;
+                    roi.width = crop_width;
+                    roi.height = crop_height;
+                    cv::Mat crop = input_image(roi);
+                    sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+                    srv.request.objects.push_back(*inputImage_msg);
+                } catch (cv::Exception e) {
+                        std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
+                }
+
             }
             if(shirt_color) {
                     printf("Shirt detection is ON \n");
