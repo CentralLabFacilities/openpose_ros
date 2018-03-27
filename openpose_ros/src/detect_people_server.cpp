@@ -223,9 +223,11 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         face_client_ptr.get()->call(srv);
         ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
         ROS_INFO("personsize: %u",(int)person_list.size());
-        for (size_t i = 0; i < person_list.size(); ++i) {
-                person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
-                person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+        if((int)srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
+            for (size_t i = 0; i < srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
+                    person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+                    person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+            }
         }
     }
     if(shirt_color) {
