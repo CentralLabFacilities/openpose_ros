@@ -575,9 +575,15 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	roi.y = cropy;
 	roi.width = cropwidth;
 	roi.height = cropheight;
-
+    cv::Mat crop_img = image;
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
-    	cv::Mat crop_img = image(roi); // todo: no hips or shoulders
+    try {
+        cv::Mat crop_img = image(roi);
+
+    } catch (cv::Exception e) {
+        std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
+        return "NO_BOUNDING_BOX";
+    }
 
 
     //------HSV------
