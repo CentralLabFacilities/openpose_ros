@@ -65,6 +65,8 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
+int WHITE, BLACK, GREY, RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE = 0;
+
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
     person_mutex.lock();
@@ -609,38 +611,26 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
 
 
-    if ( mean_color[2] > 250 )
+    if ( mean_color[2] > WHITE )
         return "white";
-    if ( mean_color[2] < 60 )
+    if ( mean_color[2] < BLACK )
         return "black";
-    if ( mean_color[1] <  60 )
+    if ( mean_color[1] <  GREY )
         return "grey";
-    if( mean_color[0] < 8  || mean_color[0] >= 170 )
+    if( mean_color[0] < RED  || mean_color[0] >= PURPLE )
         return "red";
-    if( 8 <= mean_color[0]  && mean_color[0] < 19 )
+    if( RED <= mean_color[0]  && mean_color[0] < ORANGE )
         return "orange";
-    if( 19 <= mean_color[0]  && mean_color[0] < 35)
+    if( ORANGE <= mean_color[0]  && mean_color[0] < YELLOW )
         return "yellow";
-    if( 35 <= mean_color[0] && mean_color[0] < 80 )
+    if( YELLOW <= mean_color[0] && mean_color[0] < GREEN )
         return "green";
-    if( 80 <=  mean_color[0] && mean_color[0] < 90 )
+    if( GREEN <=  mean_color[0] && mean_color[0] < CYAN )
         return "cyan";
-    if( 90 <= mean_color[0]  && mean_color[0] < 130 )
+    if( CYAN <= mean_color[0]  && mean_color[0] < BLUE )
         return "blue";
-    if( 130 <= mean_color[0]  && mean_color[0] < 170 )
+    if( BLUE <= mean_color[0]  && mean_color[0] < PURPLE )
         return "purple";
-
-//	switch(dominant_color_index) {
-//    	      case 0 : return "red";
-//    	      case 1 : return "orange";
-//            case 2 : return "yellow";
-//            case 3 : return "green";
-//            case 4 : return "blue";
-//            case 5 : return "purple";
-//            case 6 : return "black";
-//            case 7 : return "white";
-//            case 8 : return "grey";
-//	}
 
 	return "no color";
 }
@@ -737,7 +727,10 @@ int main(int argc, char **argv) {
     pose_model = op::PoseModel::COCO_18;
 
     std::string modelsFolder;
+    std::string path_to_config;
     localNH.param("models_folder", modelsFolder, std::string("/home/nao/ros_distro/share/openpose/models/"));
+
+    localNH.param("path_to_config", path_to_config, std::string("/vol/pepper/systems/pepper-robocup-nightly/share/pepper_perception_configs/vision/openpose_ros/shirtcolor.yaml"));
 
     int gpuId;
     localNH.param("gpu_id", gpuId, 0);
@@ -770,6 +763,46 @@ int main(int argc, char **argv) {
         gender_age = true;
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
     }
+
+    //READING CONFIG FILE
+    cv::FileStorage fs(path_to_config, cv::FileStorage::READ);
+
+    if (fs.isOpened()) {
+
+        fs["white"] >> WHITE;
+        std::cout << ">>> Input Topic: --> " << WHITE << std::endl;
+
+        fs["black"] >> BLACK;
+        std::cout << ">>> Input Topic: --> " << BLACK << std::endl;
+
+        fs["grey"] >> GREY;
+        std::cout << ">>> Input Topic: --> " << GREY << std::endl;
+
+        fs["red"] >> RED;
+        std::cout << ">>> Input Topic: --> " << RED << std::endl;
+
+        fs["orange"] >> ORANGE;
+        std::cout << ">>> Input Topic: --> " << ORANGE << std::endl;
+
+        fs["yellow"] >> YELLOW;
+        std::cout << ">>> Input Topic: --> " << YELLOW << std::endl;
+
+        fs["green"] >> GREEN;
+        std::cout << ">>> Input Topic: --> " << GREEN << std::endl;
+
+        fs["cyan"] >> CYAN;
+        std::cout << ">>> Input Topic: --> " << CYAN << std::endl;
+
+        fs["blue"] >> BLUE;
+        std::cout << ">>> Input Topic: --> " << BLUE << std::endl;
+
+        fs["purple"] >> PURPLE;
+        std::cout << ">>> Input Topic: --> " << PURPLE << std::endl;
+
+    } else {
+        std::cout << ">>> Could not open Config file." << std::endl;
+}
+
 
     if (visualize) {
         cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);

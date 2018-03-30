@@ -1,5 +1,7 @@
 <launch>
         <arg name="path" default="/vol/pepper/systems/pepper-robocup-nightly/share/openpose/models/"/>
+        <arg name="path_to_config"
+            default="/vol/pepper/systems/pepper-robocup-nightly/share/pepper_perception_configs/vision/openpose_ros/shirtcolor.yaml"/>
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
                 <remap from="/xtion/rgb/image_raw" to="/pepper_robot/sink/front/image_raw"/>
 		<param name="net_input_size_width" value="320" />
@@ -15,7 +17,8 @@
                 <param name="crowd_attribute_service_topic" value="/open_pose/get_crowd_attributes" />
                 <param name="image_topic" value="/pepper_robot/sink/front/image_raw" />
                 <param name="models_folder" value="$(arg path)" />
-		<param name="gpu_id" value="0" />
+                <param name="path_to_config" value="$(arg path_to_config)" />
+                <param name="gpu_id" value="0" />
                 <param name="visualize" value="true" />
 		<param name="visualize_uuid" value="false" />
     </node>
