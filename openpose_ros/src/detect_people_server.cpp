@@ -770,34 +770,34 @@ int main(int argc, char **argv) {
     if (fs.isOpened()) {
 
         fs["white"] >> WHITE;
-        std::cout << ">>> Input Topic: --> " << WHITE << std::endl;
+        std::cout << ">>> White value: --> " << WHITE << std::endl;
 
         fs["black"] >> BLACK;
-        std::cout << ">>> Input Topic: --> " << BLACK << std::endl;
+        std::cout << ">>> Black value: --> " << BLACK << std::endl;
 
         fs["grey"] >> GREY;
-        std::cout << ">>> Input Topic: --> " << GREY << std::endl;
+        std::cout << ">>> Grey value: --> " << GREY << std::endl;
 
         fs["red"] >> RED;
-        std::cout << ">>> Input Topic: --> " << RED << std::endl;
+        std::cout << ">>> Red value: --> " << RED << std::endl;
 
         fs["orange"] >> ORANGE;
-        std::cout << ">>> Input Topic: --> " << ORANGE << std::endl;
+        std::cout << ">>> Orange value: --> " << ORANGE << std::endl;
 
         fs["yellow"] >> YELLOW;
-        std::cout << ">>> Input Topic: --> " << YELLOW << std::endl;
+        std::cout << ">>> Yellow value: --> " << YELLOW << std::endl;
 
         fs["green"] >> GREEN;
-        std::cout << ">>> Input Topic: --> " << GREEN << std::endl;
+        std::cout << ">>> Green value: --> " << GREEN << std::endl;
 
         fs["cyan"] >> CYAN;
-        std::cout << ">>> Input Topic: --> " << CYAN << std::endl;
+        std::cout << ">>> Cyan value: --> " << CYAN << std::endl;
 
         fs["blue"] >> BLUE;
-        std::cout << ">>> Input Topic: --> " << BLUE << std::endl;
+        std::cout << ">>> Blue: --> " << BLUE << std::endl;
 
         fs["purple"] >> PURPLE;
-        std::cout << ">>> Input Topic: --> " << PURPLE << std::endl;
+        std::cout << ">>> Purple: --> " << PURPLE << std::endl;
 
     } else {
         std::cout << ">>> Could not open Config file." << std::endl;
