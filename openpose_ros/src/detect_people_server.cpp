@@ -599,13 +599,11 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     cv::Mat crop_img = image;
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
     try {
-        cv::Mat crop_img = image(roi);
-
+        crop_img = image(roi);
     } catch (cv::Exception e) {
         std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
         return "NO_BOUNDING_BOX";
     }
-
 
     cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
 //    cv::resizeWindow("CLF OpenPose | Crowd UUID", 320, 240);
