@@ -140,9 +140,11 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     ROS_INFO("Extracted %d people.", pose_key_points.getSize(0));
 
+
     if(pose_key_points.getSize(0) == 0) {
         openpose_ros_msgs::PersonAttributes attributes;
         res.attributes.push_back(attributes);
+        image_mutex_crowd.unlock();
         return true;
     }
 
