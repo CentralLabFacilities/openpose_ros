@@ -194,14 +194,14 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
             try {
                 printf ("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
-                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image);
+                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, input_image_crowd);
 
                 cv::Rect roi;
                 roi.x = crop_x;
                 roi.y = crop_y;
                 roi.width = crop_width;
                 roi.height = crop_height;
-                cv::Mat crop = input_image(roi);
+                cv::Mat crop = input_image_crowd(roi);
                 sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
                 srv.request.objects.push_back(*inputImage_msg);
             } catch (cv::Exception e) {
@@ -227,6 +227,8 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         ROS_INFO("personsize: %u",(int)person_list.size());
         if((int)srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
             for (size_t i = 0; i < srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
+                    std::cout << "GENDER HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
+                    std::cout << "AGE HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability << std::endl;
                     person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
                     person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
             }
@@ -371,6 +373,8 @@ openpose_ros_msgs::PersonAttributes getAttributes(std::string uuid) {
             ROS_INFO("personsize: %u",(int)person_list.size());
             if((int)srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
                 for (size_t i = 0; i < srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
+                    std::cout << "GENDER HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
+                    std::cout << "AGE HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability << std::endl;
                         person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
                         person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
                 }
@@ -577,7 +581,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 		}
 	}
 
-    	printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
+    printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
 	printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
 
 	if (cropx + cropwidth >= image.size().width) { cropwidth = cropwidth - std::abs((cropx + cropwidth) - image.size().width); }
@@ -675,6 +679,7 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
     if (image.size().height <= (y+height)) {
         height -= (y+height - image.size().height);
     }
+    return;
 }
 
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
