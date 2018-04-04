@@ -607,6 +607,10 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     }
 
 
+    cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
+//    cv::resizeWindow("CLF OpenPose | Crowd UUID", 320, 240);
+    cv::waitKey(3);
+
     //------HSV------
     cv::Mat hsv_crop_img;
     cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
