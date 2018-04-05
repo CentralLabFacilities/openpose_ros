@@ -47,7 +47,7 @@ int scale_number;
 double scale_gap;
 cv::Mat input_image;
 cv::Mat input_image_crowd;
-bayes_people_tracker_msgs::PeopleTrackerImage people_tracker_iamges;
+bayes_people_tracker_msgs::PeopleTrackerImage people_tracker_images;
 std::mutex person_mutex;
 std::mutex image_mutex;
 std::mutex image_mutex_crowd;
@@ -73,7 +73,7 @@ int WHITE, BLACK, GREY, RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE = 0;
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
     //liste von people image, people image hat uuid und image
     person_mutex.lock();
-    people_tracker_iamges = msg;
+    people_tracker_images = msg;
     person_mutex.unlock();
 }
 
@@ -99,11 +99,11 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
 bool getImageByUuid(std::string id) {
     cv_bridge::CvImagePtr cv_bridge;
     person_mutex.lock();
-    for(int i = 0; i< people_tracker_iamges.trackedPeopleImg.size(); i++){
-        ROS_INFO("looking at uuid %s", people_tracker_iamges.trackedPeopleImg.at(i).uuid.c_str());
-        if (people_tracker_iamges.trackedPeopleImg.at(i).uuid.compare(id) == 0){
+    for(int i = 0; i< people_tracker_images.trackedPeopleImg.size(); i++){
+        ROS_INFO("looking at uuid %s", people_tracker_images.trackedPeopleImg.at(i).uuid.c_str());
+        if (people_tracker_images.trackedPeopleImg.at(i).uuid.compare(id) == 0){
             try {
-                cv_bridge = cv_bridge::toCvCopy(people_tracker_iamges.trackedPeopleImg.at(i).image, sensor_msgs::image_encodings::BGR8);
+                cv_bridge = cv_bridge::toCvCopy(people_tracker_images.trackedPeopleImg.at(i).image, sensor_msgs::image_encodings::BGR8);
             }
             catch (cv_bridge::Exception &e) {
                 ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
@@ -127,18 +127,30 @@ bool getImageByUuid(std::string id) {
 }
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
-//    if(bottom_cam && req.useHD){
-//        pepper_clf_msgs::BottomCamHDImage srv;
-//        srv.request.take_picture = true;
-//        bottom_cam_client_ptr.get()->call(srv);
-//        srv.response.img;
-//    }
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
+    openpose_ros_msgs::PersonAttributes attributes;
+    if(bottom_cam && req.useHD){
+        cv_bridge::CvImagePtr cv_bridge;
+        pepper_clf_msgs::BottomCamHDImage srv;
+        srv.request.take_picture = true;
+        bottom_cam_client_ptr.get()->call(srv);
+        try{
+            cv_bridge = cv_bridge::toCvCopy(srv.response.img, sensor_msgs::image_encodings::BGR8);
+        } catch (cv_bridge::Exception &e) {
+            ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
+            res.attributes.push_back(attributes);
+            return true;
+        }
+        image_mutex_crowd.lock();
+        input_image_crowd = cv_bridge->image;
+        image_mutex_crowd.unlock();
+    } else {
     image_mutex_crowd.lock();
     person_list = getPersonList(input_image_crowd);
     image_mutex_crowd.unlock();
+    }
     for(int i = 0; i < person_list.size(); i++) {
-        openpose_ros_msgs::PersonAttributes attributes = getPostureAndGesture(person_list.at(i));
+        attributes = getPostureAndGesture(person_list.at(i));
         res.attributes.push_back(attributes);
     }
     return true;
