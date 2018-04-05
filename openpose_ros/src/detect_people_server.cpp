@@ -47,6 +47,7 @@ int scale_number;
 double scale_gap;
 cv::Mat input_image;
 cv::Mat input_image_crowd;
+cv::Mat input_image_crowd_hd;
 bayes_people_tracker_msgs::PeopleTrackerImage people_tracker_images;
 std::mutex person_mutex;
 std::mutex image_mutex;
@@ -134,21 +135,29 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         pepper_clf_msgs::BottomCamHDImage srv;
         srv.request.take_picture = true;
         bottom_cam_client_ptr.get()->call(srv);
-        try{
-            cv_bridge = cv_bridge::toCvCopy(srv.response.img, sensor_msgs::image_encodings::BGR8);
-        } catch (cv_bridge::Exception &e) {
-            ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
-            res.attributes.push_back(attributes);
-            return true;
+        if(srv.response.success){
+            try{
+                cv_bridge = cv_bridge::toCvCopy(srv.response.img, sensor_msgs::image_encodings::BGR8);
+            } catch (cv_bridge::Exception &e) {
+                ROS_ERROR("cv_bridge failed to convert sensor msg: %s! Can't use HD Cam", e.what());
+                res.attributes.push_back(attributes);
+                return true;
+            }
+            input_image_crowd_hd = cv_bridge->image;
+            if (visualize) {
+                cv::imshow("CLF OpenPose | HD Crowd", input_image_crowd_hd);
+                cv::resizeWindow("CLF OpenPose | HD Crowd", 320, 240);
+                cv::waitKey(3);
+            }
+            person_list = getPersonList(input_image_crowd_hd);
         }
-        image_mutex_crowd.lock();
-        input_image_crowd = cv_bridge->image;
-        image_mutex_crowd.unlock();
     } else {
     image_mutex_crowd.lock();
     person_list = getPersonList(input_image_crowd);
     image_mutex_crowd.unlock();
     }
+
+
     for(int i = 0; i < person_list.size(); i++) {
         attributes = getPostureAndGesture(person_list.at(i));
         res.attributes.push_back(attributes);
