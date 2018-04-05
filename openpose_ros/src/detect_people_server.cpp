@@ -291,6 +291,8 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
                 roi.width = crop_width;
                 roi.height = crop_height;
                 cv::Mat crop = image(roi);
+                cv::imshow("CLF OpenPose | gender and age input", crop);
+                cv::waitKey(3);
                 sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
                 srv.request.objects.push_back(*inputImage_msg);
             } catch (cv::Exception e) {
