@@ -16,6 +16,7 @@
                 <param name="person_attribute_service_topic" value="/open_pose/get_person_attributes" />
                 <param name="crowd_attribute_service_topic" value="/open_pose/get_crowd_attributes" />
                 <param name="image_topic" value="/pepper_robot/sink/front/image_raw" />
+                <param name="bottom_image_topic" value="/pepper_robot/sink/bottom/image_raw" />
                 <param name="models_folder" value="$(arg path)" />
                 <param name="path_to_config" value="$(arg path_to_config)" />
                 <param name="gpu_id" value="0" />
