@@ -171,6 +171,14 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     if(getImageByUuid(req.personId)){
         person_list = getPersonList(input_image);
+        if (person_list.size() == 0) {
+
+            ROS_WARN("getPersonAttributesCb: No Peson found! Person list empty!");
+            return true;
+        }
+    } else {
+        ROS_WARN("getPersonAttributesCb: No Person found with matching UUID!");
+        return true;
     }
     image_mutex.unlock();
 
@@ -362,17 +370,11 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     double Vertical = 90;
     double Horizontal = 180;
 
-    double LWristLShoulderAngle = calcAngle(LWrist, LShoulder);
-    double LHipLShoulderAngle = calcAngle(LHip, LShoulder);
     double LHipLAnkleAngle = calcAngle(LHip,LAnkle);
-    double LAnkleLShoulderAngle = calcAngle(LAnkle, LShoulder);
     double LKneeLHipDist = sqrt(pow(LKnee.y - LHip.y , 2));
     double LAnkleLHipDist = sqrt(pow(LAnkle.y - LHip.y , 2));
 
-    double RWristRShoulderAngle = calcAngle(RWrist, RShoulder);
-    double RHipRShoulderAngle = calcAngle(RHip, RShoulder);
     double RHipRAnkleAngle = calcAngle(RHip, RAnkle);
-    double RAnkleRShoulderAngle = calcAngle(RAnkle, RShoulder);
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
 
