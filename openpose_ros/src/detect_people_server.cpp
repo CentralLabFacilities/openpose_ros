@@ -46,12 +46,10 @@ int scale_number;
 double scale_gap;
 cv::Mat input_image;
 cv::Mat input_image_crowd;
-cv::Mat input_image_crowd_hd;
 bayes_people_tracker_msgs::PeopleTrackerImage people_tracker_images;
 std::mutex person_mutex;
 std::mutex image_mutex;
 std::mutex image_mutex_crowd;
-std::mutex image_mutex_crowd_hd;
 bool visualize;
 bool visualize_uuid;
 bool gender_age = false;
@@ -95,25 +93,6 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     image_mutex_crowd.unlock();
 }
 
-void bottomImageCb(const sensor_msgs::ImageConstPtr &msg) {
-    cv_bridge::CvImagePtr cv_bridge;
-    try {
-        cv_bridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception &e) {
-        ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
-        return;
-    }
-    image_mutex_crowd_hd.lock();
-    input_image_crowd_hd = cv_bridge->image;
-    if (visualize) {
-        cv::imshow("CLF OpenPose | HD Crowd", input_image_crowd_hd);
-        cv::resizeWindow("CLF OpenPose | HD Crowd", 320, 240);
-        cv::waitKey(3);
-    }
-    image_mutex_crowd_hd.unlock();
-}
-
 bool getImageByUuid(std::string id) {
     cv_bridge::CvImagePtr cv_bridge;
     person_mutex.lock();
@@ -147,15 +126,10 @@ bool getImageByUuid(std::string id) {
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     openpose_ros_msgs::PersonAttributes attributes;
-    if(req.useHD){
-        image_mutex_crowd_hd.lock();
-        person_list = getPersonList(input_image_crowd_hd);
-        image_mutex_crowd_hd.unlock();
-    } else {
-        image_mutex_crowd.lock();
-        person_list = getPersonList(input_image_crowd);
-        image_mutex_crowd.unlock();
-    }
+
+    image_mutex_crowd.lock();
+    person_list = getPersonList(input_image_crowd);
+    image_mutex_crowd.unlock();
 
     for(int i = 0; i < person_list.size(); i++) {
         attributes = getPostureAndGesture(person_list.at(i));
@@ -652,8 +626,6 @@ int main(int argc, char **argv) {
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
     std::string imageTopic = "/pepper_robot/sink/front/image_raw";
     localNH.param("image_topic", imageTopic, imageTopic);
-    std::string bottomImageTopic = "/pepper_robot/sink/bottom/image_raw";
-    localNH.param("bottom_image_topic", bottomImageTopic, bottomImageTopic);
 
 
     int netInputSizeWidth;
@@ -710,8 +682,6 @@ int main(int argc, char **argv) {
 
     ros::Subscriber imageSub = n.subscribe(imageTopic, 1, imageCb);
 
-    ros::Subscriber bottomImageSub = n.subscribe(bottomImageTopic, 1, bottomImageCb);
-
     //rosservice for age and gender detection
     if(ros::service::exists("clf_gender_age_classify_array",false)) {
         ROS_INFO("gender and age classify service exists.");
@@ -761,7 +731,6 @@ int main(int argc, char **argv) {
 
     if (visualize) {
         cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
-        cv::namedWindow("CLF OpenPose | HD Crowd", cv::WINDOW_NORMAL);
     }
 
     if (visualize_uuid) {
