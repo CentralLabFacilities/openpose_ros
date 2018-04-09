@@ -148,10 +148,12 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
         if (person_list.size() == 0) {
 
             ROS_WARN("getPersonAttributesCb: No Peson found! Person list empty!");
+            image_mutex.unlock();
             return true;
         }
     } else {
         ROS_WARN("getPersonAttributesCb: No Person found with matching UUID!");
+        image_mutex.unlock();
         return true;
     }
     image_mutex.unlock();
