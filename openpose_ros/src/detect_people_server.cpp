@@ -206,6 +206,7 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat inputImage
     op::CvMatToOpOutput cvMatToOpOutput;
     op::PoseExtractorCaffe poseExtractorCaffe{pose_model, modelsFolder, gpuId};
 
+    poseExtractorCaffe.initializationOnThread();
 
     const op::Point<int> imageSize{inputImage.cols, inputImage.rows};
     // Step 2 - Get desired scale sizes
