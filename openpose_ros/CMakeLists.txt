@@ -11,6 +11,7 @@ find_package(catkin REQUIRED
   roscpp
   cv_bridge
   tf
+  roslib
   gender_and_age_msgs
   openpose_ros_msgs
   bayes_people_tracker_msgs
@@ -83,7 +84,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES openpose_ros
-  CATKIN_DEPENDS roscpp cv_bridge
+  CATKIN_DEPENDS roscpp cv_bridge package
 #  DEPENDS system_lib
 )
 
@@ -91,19 +92,14 @@ catkin_package(
 ## Build ##
 ###########
 
-set(OPENPOSE_DIR /usr/local)
-IF (CMAKE_INSTALL_PREFIX)
-    SET(OPENPOSE_DIR ${CMAKE_INSTALL_PREFIX})
-    MESSAGE("-- Assuming openpose in: " ${OPENPOSE_DIR})
-ENDIF()
+find_package(OpenPose REQUIRED)
+find_package(Caffe REQUIRED)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${OPENPOSE_DIR}/include
-  ${OPENPOSE_DIR}/include/caffe
-  ${OPENPOSE_DIR}/include/openpose
+  ${OpenPose_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -127,9 +123,8 @@ add_dependencies(detect_people_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 ## Specify libraries to link a library or executable target against
 target_link_libraries(detect_people_server
    ${catkin_LIBRARIES}
-   ${OPENPOSE_DIR}/lib/libopenpose.so
-   ${OPENPOSE_DIR}/lib64/libcudart.so.8.0
-   ${OpenCV_LIBS}
+   ${OpenPose_LIBS}
+   ${Caffe_LIBS}
  )
 
 #############

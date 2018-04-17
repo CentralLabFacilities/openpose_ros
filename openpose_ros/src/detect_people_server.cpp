@@ -14,6 +14,7 @@
 #include <ros/node_handle.h>
 #include <ros/service_server.h>
 #include <ros/init.h>
+#include <ros/package.h>
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Point.h>
 #include <cv_bridge/cv_bridge.h>
@@ -64,6 +65,8 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res);
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
+std::string modelsFolder;
+int gpuId;
 
 int WHITE, BLACK, GREY, RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE = 0;
 
@@ -198,16 +201,30 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
 
 
 
-std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
-    op::Array<float> net_input_array;
-    std::vector<float> scale_ratios;
-    op::CvMatToOpInput cvMatToOpInput{net_input_size, scale_number, (float) scale_gap};
+std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat inputImage) {
+    op::CvMatToOpInput cvMatToOpInput{pose_model};
+    op::CvMatToOpOutput cvMatToOpOutput;
+    op::PoseExtractorCaffe poseExtractorCaffe{pose_model, modelsFolder, gpuId};
+
+
+    const op::Point<int> imageSize{inputImage.cols, inputImage.rows};
+    // Step 2 - Get desired scale sizes
+    std::vector<double> scaleInputToNetInputs;
+    std::vector<op::Point<int>> netInputSizes;
+    double scaleInputToOutput;
+    op::Point<int> outputResolution;
+    op::ScaleAndSizeExtractor scaleAndSizeExtractor(net_input_size, output_size, scale_number, scale_gap);
+    std::tie(scaleInputToNetInputs, netInputSizes, scaleInputToOutput, outputResolution)
+        = scaleAndSizeExtractor.extract(imageSize);
+    // Step 3 - Format input image to OpenPose input and output formats
+    const auto netInputArray = cvMatToOpInput.createArray(inputImage, scaleInputToNetInputs, netInputSizes);
     ROS_INFO("Converting cv image to openpose array.");
-    ROS_INFO("Im cols %d, im rows %d", image.cols, image.rows);
-    std::tie(net_input_array, scale_ratios) = cvMatToOpInput.format(image);
+    ROS_INFO("Im cols %d, im rows %d", inputImage.cols, inputImage.rows);
+    auto outputArray = cvMatToOpOutput.createArray(inputImage, scaleInputToOutput, outputResolution);
+    // Step 4 - Estimate poseKeypoints
     ROS_INFO("Detect poses using forward pass.");
-    pose_extractor->forwardPass(net_input_array, {image.cols, image.rows}, scale_ratios);
-    const auto pose_key_points = pose_extractor->getPoseKeypoints();
+    poseExtractorCaffe.forwardPass(netInputArray, imageSize, scaleInputToNetInputs);
+    const auto pose_key_points = poseExtractorCaffe.getPoseKeypoints();
 
     gender_and_age_msgs::GenderAndAgeService srv;
     std::vector<std::string> shirt_list;
@@ -267,14 +284,14 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
             try {
                 printf ("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
-                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, image);
+                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, inputImage);
 
                 cv::Rect roi;
                 roi.x = crop_x;
                 roi.y = crop_y;
                 roi.width = crop_width;
                 roi.height = crop_height;
-                cv::Mat crop = image(roi);
+                cv::Mat crop = inputImage(roi);
                 cv::imshow("CLF OpenPose | gender and age input", crop);
                 cv::waitKey(3);
                 sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
@@ -287,7 +304,7 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
         if(shirt_color) {
                 printf("Shirt detection is ON \n");
                 try{
-                        shirt_list.push_back(getShirtColor(person, image));
+                        shirt_list.push_back(getShirtColor(person, inputImage));
                 } catch (cv::Exception e) {
 
                         std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
