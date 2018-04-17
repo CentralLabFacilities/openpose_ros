@@ -626,7 +626,7 @@ int main(int argc, char **argv) {
     localNH.param("person_attribute_service_topic", personAttServTopic, personAttServTopic);
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
-    std::string imageTopic = "/pepper_robot/sink/front/image_raw";
+    std::string imageTopic = "/camera/image_raw";
     localNH.param("image_topic", imageTopic, imageTopic);
 
 
@@ -653,25 +653,23 @@ int main(int argc, char **argv) {
 
     pose_model = op::PoseModel::COCO_18;
 
-    std::string modelsFolder;
-    std::string path_to_config;
-    localNH.param("models_folder", modelsFolder, std::string("/home/nao/ros_distro/share/openpose/models/"));
 
-    localNH.param("path_to_config", path_to_config, std::string("/vol/pepper/systems/pepper-robocup-nightly/share/pepper_perception_configs/vision/openpose_ros/shirtcolor.yaml"));
+    std::string package_path = ros::package::getPath("openpose_ros");
 
-    int gpuId;
+    std::string path_to_config = package_path + "/config/shirtcolor.yaml";
+    modelsFolder = package_path + "/../openpose/models/";
+    localNH.param("models_folder", modelsFolder);
+
+    localNH.param("path_to_config", path_to_config);
+
     localNH.param("gpu_id", gpuId, 0);
 
-    coco_body_parts = op::POSE_COCO_BODY_PARTS;
+    coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
     localNH.param("visualize", visualize, true);
     localNH.param("visualize_uuid", visualize_uuid, false);
 
-    //init openpose
-    pose_extractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(net_input_size, net_output_size,
-                                                                                       output_size, scale_number,
-                                                                                       pose_model, modelsFolder, gpuId));
-    pose_extractor->initializationOnThread();
+
 
     ros::NodeHandle n;
     //advertise service to get detected people poses
