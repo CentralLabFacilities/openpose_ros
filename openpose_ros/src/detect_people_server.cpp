@@ -28,6 +28,8 @@
 #include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 
+#include <ros/package.h> //??
+
 #include <cstdint>
 #include <opencv2/core/core.hpp>
 
@@ -36,6 +38,10 @@
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
 
+
+
+int gpu_id;
+std::string models_folder;
 std::shared_ptr <op::PoseExtractor> pose_extractor;
 op::PoseModel pose_model;
 op::Point<int> net_input_size;
@@ -201,13 +207,28 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
 std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
     op::Array<float> net_input_array;
     std::vector<float> scale_ratios;
-    op::CvMatToOpInput cvMatToOpInput{net_input_size, scale_number, (float) scale_gap};
+    op::CvMatToOpInput cvMatToOpInput{pose_model};
+    op::CvMatToOpOutput cvMatToOpOutput;
+    op::PoseExtractorCaffe poseExtractorCaffe{pose_model, models_folder, gpu_id};
+    poseExtractorCaffe.initializationOnThread();
+
     ROS_INFO("Converting cv image to openpose array.");
     ROS_INFO("Im cols %d, im rows %d", image.cols, image.rows);
-    std::tie(net_input_array, scale_ratios) = cvMatToOpInput.format(image);
+    const op::Point<int> image_size{image.cols, image.rows};
+
+    std::vector<double> scale_input_to_net_inputs;
+    std::vector<op::Point<int>> net_input_sizes;
+    double scale_input_to_output;
+    op::Point<int> output_resolution;
+    op::ScaleAndSizeExtractor scaleAndSizeExtractor(net_input_size, output_size, scale_number, scale_gap);
+    std::tie(scale_input_to_net_inputs, net_input_sizes, scale_input_to_output, output_resolution)
+        = scaleAndSizeExtractor.extract(image_size);
+    // Step 3 - Format input image to OpenPose input and output formats
+    const auto netInputArray = cvMatToOpInput.createArray(image, scale_input_to_net_inputs, net_input_sizes);
+
     ROS_INFO("Detect poses using forward pass.");
-    pose_extractor->forwardPass(net_input_array, {image.cols, image.rows}, scale_ratios);
-    const auto pose_key_points = pose_extractor->getPoseKeypoints();
+    poseExtractorCaffe.forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
+    const auto pose_key_points = poseExtractorCaffe.getPoseKeypoints();
 
     gender_and_age_msgs::GenderAndAgeService srv;
     std::vector<std::string> shirt_list;
@@ -215,6 +236,19 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
     ROS_INFO("Extracted %d people.", pose_key_points.getSize(0));
     if(pose_key_points.getSize(0) == 0) {
         return person_list;
+    }
+
+    if (visualize) {
+        op::PoseCpuRenderer pose_renderer(pose_model,0.5,0.5,0.5,0.5);
+        op::OpOutputToCvMat opOutputToCvMat;
+        op::Array<float> output_array;
+        output_array = cvMatToOpOutput.createArray(image, scale_input_to_output, output_resolution);
+        pose_renderer.renderPose(output_array,pose_key_points,scale_input_to_output);
+
+        auto output_image = opOutputToCvMat.formatToCvMat(output_array);
+
+        cv::imshow("Detections", output_image);
+        cv::waitKey(3);
     }
 
 
@@ -275,8 +309,10 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
                 roi.width = crop_width;
                 roi.height = crop_height;
                 cv::Mat crop = image(roi);
-                cv::imshow("CLF OpenPose | gender and age input", crop);
-                cv::waitKey(3);
+                if(visualize){
+                    cv::imshow("CLF OpenPose | gender and age input", crop);
+                    cv::waitKey(3);
+                }
                 sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
                 srv.request.objects.push_back(*inputImage_msg);
             } catch (cv::Exception e) {
@@ -653,25 +689,18 @@ int main(int argc, char **argv) {
 
     pose_model = op::PoseModel::COCO_18;
 
-    std::string modelsFolder;
     std::string path_to_config;
-    localNH.param("models_folder", modelsFolder, std::string("/home/nao/ros_distro/share/openpose/models/"));
+    localNH.param("models_folder", models_folder, std::string("/home/nao/ros_distro/share/openpose/models/"));
 
     localNH.param("path_to_config", path_to_config, std::string("/vol/pepper/systems/pepper-robocup-nightly/share/pepper_perception_configs/vision/openpose_ros/shirtcolor.yaml"));
 
     int gpuId;
     localNH.param("gpu_id", gpuId, 0);
 
-    coco_body_parts = op::POSE_COCO_BODY_PARTS;
+    coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
     localNH.param("visualize", visualize, true);
     localNH.param("visualize_uuid", visualize_uuid, false);
-
-    //init openpose
-    pose_extractor = std::shared_ptr<op::PoseExtractorCaffe>(new op::PoseExtractorCaffe(net_input_size, net_output_size,
-                                                                                       output_size, scale_number,
-                                                                                       pose_model, modelsFolder, gpuId));
-    pose_extractor->initializationOnThread();
 
     ros::NodeHandle n;
     //advertise service to get detected people poses
