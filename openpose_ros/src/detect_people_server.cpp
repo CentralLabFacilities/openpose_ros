@@ -693,8 +693,7 @@ int main(int argc, char **argv) {
 
     localNH.param("path_to_config", path_to_config, std::string("/vol/pepper/systems/pepper-robocup-nightly/share/pepper_perception_configs/vision/openpose_ros/shirtcolor.yaml"));
 
-    int gpuId;
-    localNH.param("gpu_id", gpuId, 0);
+    localNH.param("gpu_id", gpu_id, 0);
 
     coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
