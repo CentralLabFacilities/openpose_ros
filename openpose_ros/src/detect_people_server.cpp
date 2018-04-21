@@ -38,15 +38,22 @@
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
 
-
-
 int gpu_id;
 std::string models_folder;
 std::shared_ptr <op::PoseExtractor> pose_extractor;
+
+// OP
 op::PoseModel pose_model;
 op::Point<int> net_input_size;
 op::Point<int> net_output_size;
 op::Point<int> output_size;
+// OP IN
+op::CvMatToOpInput cvMatToOpInput;
+// OP OUT
+op::CvMatToOpOutput cvMatToOpOutput;
+// OP EXTRACT
+op::PoseExtractorCaffe poseExtractorCaffe;
+
 std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
 double scale_gap;
@@ -73,8 +80,14 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 int WHITE, BLACK, GREY, RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE = 0;
 
+void initializeOP() {
+    cvMatToOpInput{pose_model};
+    poseExtractorCaffe{pose_model, models_folder, gpu_id};
+    poseExtractorCaffe.initializationOnThread();
+}
+
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
-    //liste von people image, people image hat uuid und image
+    // List of people image, people image hat uuid und image
     person_mutex.lock();
     people_tracker_images = msg;
     person_mutex.unlock();
@@ -132,7 +145,6 @@ bool getImageByUuid(std::string id) {
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     openpose_ros_msgs::PersonAttributes attributes;
-
     image_mutex_crowd.lock();
     person_list = getPersonList(input_image_crowd);
     image_mutex_crowd.unlock();
@@ -147,7 +159,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
 bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res) {
     image_mutex.lock();
     ROS_INFO("Called GetAttributes service.");
-
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     if(getImageByUuid(req.personId)){
         person_list = getPersonList(input_image);
@@ -198,7 +209,6 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
     }
 
     res.attributes = getPostureAndGesture(person_list.at(best_confidence_index));
-
     return true;
 }
 
@@ -207,10 +217,6 @@ bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req,
 std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
     op::Array<float> net_input_array;
     std::vector<float> scale_ratios;
-    op::CvMatToOpInput cvMatToOpInput{pose_model};
-    op::CvMatToOpOutput cvMatToOpOutput;
-    op::PoseExtractorCaffe poseExtractorCaffe{pose_model, models_folder, gpu_id};
-    poseExtractorCaffe.initializationOnThread();
 
     ROS_INFO("Converting cv image to openpose array.");
     ROS_INFO("Im cols %d, im rows %d", image.cols, image.rows);
@@ -250,7 +256,6 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
         cv::imshow("Detections", output_image);
         cv::waitKey(3);
     }
-
 
     for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
         openpose_ros_msgs::PersonDetection person = initPersonDetection();
@@ -450,9 +455,7 @@ openpose_ros_msgs::PersonDetection initPersonDetection() {
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image)	{
 	printf ("getShirtColor() \n");
 	cv::Rect roi;
-
 	int cropx, cropy, cropwidth, cropheight = 1;
-
 
 	if (person.RShoulder.confidence > 0 && person.LShoulder.confidence > 0) {
 		cropy = person.RShoulder.v;
@@ -472,9 +475,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 				printf("no hip found\n");
 				cropheight = cropwidth;
 			}
-		
-		}
 
+		}
 	} else {
 		if (person.RHip.confidence > 0 && person.LHip.confidence > 0)	{
 			if ((person.RShoulder.confidence > 0)^(person.LShoulder.confidence > 0)) {
@@ -533,7 +535,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 				printf ("No BB possible: RShoulder.confidence %f, LShoulder.confidence %f, RHip.confidence %f, LHip.confidence %f \n", person.RShoulder.confidence, person.LShoulder.confidence, person.RHip.confidence, person.LHip.confidence);
                 return "NO_BOUNDING_BOX";
             }
-			
+
 		}
 	}
 
@@ -561,8 +563,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         return "NO_BOUNDING_BOX";
     }
 
-//    cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
-//    cv::waitKey(3);
+    // cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
+    // cv::waitKey(3);
 
     //------HSV------
     cv::Mat hsv_crop_img;
@@ -570,7 +572,6 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
     std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
-
 
     if ( mean_color[2] > WHITE )
         return "white";
@@ -653,7 +654,6 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
 int main(int argc, char **argv) {
 
     ros::init(argc, argv, "detect_people_server");
-
     ros::NodeHandle localNH("~");
 
     std::string extendedPeopleTopic = "/people_tracker/people/extended";
@@ -664,7 +664,6 @@ int main(int argc, char **argv) {
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
     std::string imageTopic = "/pepper_robot/sink/front/image_raw";
     localNH.param("image_topic", imageTopic, imageTopic);
-
 
     int netInputSizeWidth;
     localNH.param("net_input_size_width", netInputSizeWidth, 320);
@@ -703,22 +702,24 @@ int main(int argc, char **argv) {
     localNH.param("visualize_uuid", visualize_uuid, false);
 
     ros::NodeHandle n;
-    //advertise service to get detected people poses
+    // Advertise service to get detected people poses
     ros::ServiceServer servicePerson = n.advertiseService(personAttServTopic, getPersonAttributesCb);
 
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
 
-    //subscriber to recieve extended person message
+    // Subscriber to recieve extended person message
     ros::Subscriber extendedPeopleSub = n.subscribe(extendedPeopleTopic, 5, peopleExtendedCb);
 
     ros::Subscriber imageSub = n.subscribe(imageTopic, 1, imageCb);
 
-    //rosservice for age and gender detection
+    // ROS Service for age and gender detection
     if(ros::service::exists("clf_gender_age_classify_array",false)) {
         ROS_INFO("gender and age classify service exists.");
         gender_age = true;
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
     }
+
+    initializeOP();
 
     //READING CONFIG FILE
     cv::FileStorage fs(path_to_config, cv::FileStorage::READ);
@@ -757,8 +758,7 @@ int main(int argc, char **argv) {
 
     } else {
         std::cout << ">>> Could not open Config file." << std::endl;
-}
-
+    }
 
     if (visualize) {
         cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
@@ -766,11 +766,10 @@ int main(int argc, char **argv) {
 
     if (visualize_uuid) {
         cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
-    }	
+    }
 
     ROS_INFO("Init done. Can start detecting people.");
     ros::spin();
-
 
     return 0;
 }
