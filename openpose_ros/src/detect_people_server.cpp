@@ -48,11 +48,11 @@ op::Point<int> net_input_size;
 op::Point<int> net_output_size;
 op::Point<int> output_size;
 // OP IN
-op::CvMatToOpInput cvMatToOpInput;
+op::CvMatToOpInput *cvMatToOpInput;
 // OP OUT
 op::CvMatToOpOutput cvMatToOpOutput;
 // OP EXTRACT
-op::PoseExtractorCaffe poseExtractorCaffe;
+op::PoseExtractorCaffe *poseExtractorCaffe;
 
 std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
@@ -81,9 +81,9 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 int WHITE, BLACK, GREY, RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE = 0;
 
 void initializeOP() {
-    cvMatToOpInput{pose_model};
-    poseExtractorCaffe{pose_model, models_folder, gpu_id};
-    poseExtractorCaffe.initializationOnThread();
+    cvMatToOpInput = new op::CvMatToOpInput{pose_model};
+    poseExtractorCaffe = new op::PoseExtractorCaffe{pose_model, models_folder, gpu_id};
+    poseExtractorCaffe->initializationOnThread();
 }
 
 void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
@@ -230,11 +230,11 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
     std::tie(scale_input_to_net_inputs, net_input_sizes, scale_input_to_output, output_resolution)
         = scaleAndSizeExtractor.extract(image_size);
     // Step 3 - Format input image to OpenPose input and output formats
-    const auto netInputArray = cvMatToOpInput.createArray(image, scale_input_to_net_inputs, net_input_sizes);
+    const auto netInputArray = cvMatToOpInput->createArray(image, scale_input_to_net_inputs, net_input_sizes);
 
     ROS_INFO("Detect poses using forward pass.");
-    poseExtractorCaffe.forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
-    const auto pose_key_points = poseExtractorCaffe.getPoseKeypoints();
+    poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
+    const auto pose_key_points = poseExtractorCaffe->getPoseKeypoints();
 
     gender_and_age_msgs::GenderAndAgeService srv;
     std::vector<std::string> shirt_list;
