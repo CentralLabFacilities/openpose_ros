@@ -412,8 +412,8 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
         attributes.posture = STANDING;
     }
 
-    if ((person.LWrist.v < person.LShoulder.v && person.LWrist.v > 0 && person.LShoulder.v > 0) ||
-        (person.RWrist.v < person.RShoulder.v && person.RWrist.v > 0 && person.RShoulder.v > 0)) {
+    if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
+        (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0)) {
             attributes.gesture = WAVING;
     }
      else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
