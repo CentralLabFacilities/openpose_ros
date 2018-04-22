@@ -564,8 +564,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         return "NO_BOUNDING_BOX";
     }
 
-    // cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
-    // cv::waitKey(3);
+     cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
+     cv::waitKey(3);
 
     //------HSV------
     cv::Mat hsv_crop_img;
