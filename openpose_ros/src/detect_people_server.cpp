@@ -250,7 +250,6 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
         op::Array<float> output_array;
         output_array = cvMatToOpOutput.createArray(image, scale_input_to_output, output_resolution);
         pose_renderer.renderPose(output_array,pose_key_points,scale_input_to_output);
-
         auto output_image = opOutputToCvMat.formatToCvMat(output_array);
 
         cv::imshow("Detections", output_image);
@@ -387,16 +386,16 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     double Vertical = 90;
     double Horizontal = 180;
 
-    double LHipLAnkleAngle = calcAngle(LHip,LAnkle);
+    double LShoulderLHipAngle = calcAngle(LShoulder,LHip);
     double LKneeLHipDist = sqrt(pow(LKnee.y - LHip.y , 2));
     double LAnkleLHipDist = sqrt(pow(LAnkle.y - LHip.y , 2));
 
-    double RHipRAnkleAngle = calcAngle(RHip, RAnkle);
+    double RShoulderRHipAngle = calcAngle(RShoulder, RHip);
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
 
-    std::cout << "LHipLAnkleAngle: " << LHipLAnkleAngle << std::endl;
-    std::cout << "RHipRAnkleAngle: " << RHipRAnkleAngle << std::endl;
+    std::cout << "LHipLAnkleAngle: " << LShoulderLHipAngle << std::endl;
+    std::cout << "RHipRAnkleAngle: " << RShoulderRHipAngle << std::endl;
     std::cout << "LKneeLHipDist: " << LKneeLHipDist << std::endl;
     std::cout << "LAnkleLHipDist * SittingPercent: " << LAnkleLHipDist * SITTINGPERCENT << std::endl;
     std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
@@ -405,9 +404,9 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     if( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
             && LKneeLHipDist > 0 && RKneeRHipDist > 0 ) {
             attributes.posture = SITTING;
-    } else if( std::abs(LHipLAnkleAngle - Horizontal) < std::abs(LHipLAnkleAngle - Vertical) ||
-              std::abs(RHipRAnkleAngle - Horizontal) < std::abs(RHipRAnkleAngle - Vertical) ||
-              LHipLAnkleAngle < 45 || RHipRAnkleAngle < 45 ) {
+    } else if( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
+              std::abs(RShoulderRHipAngle - Horizontal) < std::abs(RShoulderRHipAngle - Vertical) ||
+              LShoulderLHipAngle < 45 || RShoulderRHipAngle < 45 ) {
            attributes.posture = LYING;
     } else {
         attributes.posture = STANDING;
