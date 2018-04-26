@@ -106,7 +106,7 @@ void imageCb(const sensor_msgs::ImageConstPtr &msg) {
     input_image_crowd = cv_bridge->image;
     if (visualize) {
         cv::imshow("CLF OpenPose | Crowd", input_image_crowd);
-        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
+//        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
         cv::waitKey(3);
     }
     image_mutex_crowd.unlock();
