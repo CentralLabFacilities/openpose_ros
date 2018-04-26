@@ -631,8 +631,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
             result_color = color_prototypes_bgr.at(i).first;
         }
     }
-
-    std::cout << "SHIRT COLOR DETECTION RESUL: " << result_color << std::endl;
+    std::cout << "SHIRT COLOR BGR VALUE: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl;
+    std::cout << "SHIRT COLOR DETECTION RESULT: " << result_color << std::endl;
 
     return result_color;
 }
