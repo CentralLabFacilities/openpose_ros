@@ -570,34 +570,71 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
      cv::waitKey(3);
 
     //------HSV------
-    cv::Mat hsv_crop_img;
-    cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
-    cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
+//    cv::Mat hsv_crop_img;
+//    cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
+//    cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
-    std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
+//    std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
 
-    if ( mean_color[2] > WHITE )
-        return "white";
-    if ( mean_color[2] < BLACK )
-        return "black";
-    if ( mean_color[1] <  GREY )
-        return "grey";
-    if( mean_color[0] < RED  || mean_color[0] >= PURPLE )
-        return "red";
-    if( RED <= mean_color[0]  && mean_color[0] < ORANGE )
-        return "orange";
-    if( ORANGE <= mean_color[0]  && mean_color[0] < YELLOW )
-        return "yellow";
-    if( YELLOW <= mean_color[0] && mean_color[0] < GREEN )
-        return "green";
-    if( GREEN <=  mean_color[0] && mean_color[0] < CYAN )
-        return "cyan";
-    if( CYAN <= mean_color[0]  && mean_color[0] < BLUE )
-        return "blue";
-    if( BLUE <= mean_color[0]  && mean_color[0] < PURPLE )
-        return "purple";
+//    if ( mean_color[2] > WHITE )
+//        return "white";
+//    if ( mean_color[2] < BLACK )
+//        return "black";
+//    if ( mean_color[1] <  GREY )
+//        return "grey";
+//    if( mean_color[0] < RED  || mean_color[0] >= PURPLE )
+//        return "red";
+//    if( RED <= mean_color[0]  && mean_color[0] < ORANGE )
+//        return "orange";
+//    if( ORANGE <= mean_color[0]  && mean_color[0] < YELLOW )
+//        return "yellow";
+//    if( YELLOW <= mean_color[0] && mean_color[0] < GREEN )
+//        return "green";
+//    if( GREEN <=  mean_color[0] && mean_color[0] < CYAN )
+//        return "cyan";
+//    if( CYAN <= mean_color[0]  && mean_color[0] < BLUE )
+//        return "blue";
+//    if( BLUE <= mean_color[0]  && mean_color[0] < PURPLE )
+//        return "purple";
 
-	return "no color";
+
+    // bgr distance to prototype points
+
+     cv::Scalar mean_color = cv::mean(crop_img); // [0] b, [1] g, [2] r
+
+
+    std::vector<std::pair<std::string, cv::Scalar>> color_prototypes_bgr;
+
+    color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(220,220,220)));
+    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(60,60,60)));
+    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(40,40,40)));
+    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(128,128,128)));
+    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
+    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(190,190,190)));
+    color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
+    color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(70,70,240)));
+    color_prototypes_bgr.push_back(std::make_pair("orange",cv::Scalar(0,165,255)));
+    color_prototypes_bgr.push_back(std::make_pair("yellow",cv::Scalar(0,255,255)));
+    color_prototypes_bgr.push_back(std::make_pair("geen",cv::Scalar(0,255,0)));
+    color_prototypes_bgr.push_back(std::make_pair("cyan",cv::Scalar(255,255,0)));
+    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(255,0,0)));
+    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(180,90,55)));
+    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(55,30,20)));
+    color_prototypes_bgr.push_back(std::make_pair("purple",cv::Scalar(128,0,128)));
+
+    double result_val = 999;
+    std::string result_color = "no color";
+    for (size_t i=0; i<color_prototypes_bgr.size(); i++) {
+        std::cout << "DISTANCE TO " << color_prototypes_bgr.at(i).first << ": " << cv::norm(mean_color,color_prototypes_bgr.at(i).second,cv::NORM_L2) << std::endl;
+        if (result_val > cv::norm(mean_color,color_prototypes_bgr.at(i).second,cv::NORM_L2)) {
+            result_val = cv::norm(mean_color,color_prototypes_bgr.at(i).second,cv::NORM_L2);
+            result_color = color_prototypes_bgr.at(i).first;
+        }
+    }
+
+    std::cout << "SHIRT COLOR DETECTION RESUL: " << result_color << std::endl;
+
+    return result_color;
 }
 
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
