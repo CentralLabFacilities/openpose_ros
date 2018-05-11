@@ -27,13 +27,19 @@
 #include <algorithm>
 #include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
+#include <pepper_clf_msgs/ColorImage.h>
 
-#include <ros/package.h> //??
+#include <ros/package.h>
 
 #include <cstdint>
 #include <opencv2/core/core.hpp>
 
 #define PI 3.14159265
+
+
+ros::NodeHandle n;
+ros::Subscriber depthImageSub;
+std::string depthImageTopic;
 
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
@@ -58,22 +64,22 @@ std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
 double scale_gap;
 cv::Mat input_image;
-cv::Mat input_image_crowd;
+cv::Mat depth_image;
 bayes_people_tracker_msgs::PeopleTrackerImage people_tracker_images;
 std::mutex person_mutex;
 std::mutex image_mutex;
-std::mutex image_mutex_crowd;
+std::mutex depth_image_mutex;
 bool visualize;
 bool visualize_uuid;
 bool gender_age = false;
 bool shirt_color = true;
 double SITTINGPERCENT = 0.4;
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
+boost::shared_ptr<ros::ServiceClient> color_client_ptr;
 openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
-std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image);
+std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat color_image, cv::Mat depth_image);
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 openpose_ros_msgs::PersonDetection initPersonDetection();
-bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res);
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res);
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
@@ -86,141 +92,66 @@ void initializeOP() {
     poseExtractorCaffe->initializationOnThread();
 }
 
-void peopleExtendedCb(const bayes_people_tracker_msgs::PeopleTrackerImage &msg) {
-    // List of people image, people image hat uuid und image
-    person_mutex.lock();
-    people_tracker_images = msg;
-    person_mutex.unlock();
-}
-
-void imageCb(const sensor_msgs::ImageConstPtr &msg) {
+void depthImageCb(const sensor_msgs::ImageConstPtr &msg) {
     cv_bridge::CvImagePtr cv_bridge;
     try {
-        cv_bridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+        cv_bridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO16);
     }
     catch (cv_bridge::Exception &e) {
         ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
         return;
     }
-    image_mutex_crowd.lock();
-    input_image_crowd = cv_bridge->image;
-    if (visualize) {
-        cv::imshow("CLF OpenPose | Crowd", input_image_crowd);
+    depth_image_mutex.lock();
+    depth_image = cv_bridge->image;
+//    if (visualize) {
+//        cv::imshow("CLF OpenPose | Crowd", input_image_crowd);
 //        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
-        cv::waitKey(3);
-    }
-    image_mutex_crowd.unlock();
-}
+//        cv::waitKey(3);
+//    }
+    depth_image_mutex.unlock();
 
-bool getImageByUuid(std::string id) {
-    cv_bridge::CvImagePtr cv_bridge;
-    person_mutex.lock();
-    for(int i = 0; i< people_tracker_images.trackedPeopleImg.size(); i++){
-        ROS_INFO("looking at uuid %s", people_tracker_images.trackedPeopleImg.at(i).uuid.c_str());
-        if (people_tracker_images.trackedPeopleImg.at(i).uuid.compare(id) == 0){
-            try {
-                cv_bridge = cv_bridge::toCvCopy(people_tracker_images.trackedPeopleImg.at(i).image, sensor_msgs::image_encodings::BGR8);
-            }
-            catch (cv_bridge::Exception &e) {
-                ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
-                person_mutex.unlock();
-                return false;
-            }
-            input_image = cv_bridge->image;
-            if (visualize_uuid) {
-                cv::imshow("CLF OpenPose | Person UUID", input_image);
-                cv::resizeWindow("CLF OpenPose | Person UUID", 320, 240);
-                cv::waitKey(3);
-            }
-            person_mutex.unlock();
-            return true;
-        }
-    }
-    input_image = cv::Mat::zeros(30, 30, input_image.type());
-    ROS_WARN("NO PERSON WITH UUID %s FOUND!", id.c_str());
-    person_mutex.unlock();
-    return false;
+
 }
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     openpose_ros_msgs::PersonAttributes attributes;
-    image_mutex_crowd.lock();
-    person_list = getPersonList(input_image_crowd);
-    image_mutex_crowd.unlock();
+    pepper_clf_msgs::ColorImage srv;
+    cv_bridge::CvImagePtr cv_bridge;
+    cv::Mat color_image;
 
-    for(int i = 0; i < person_list.size(); i++) {
-        attributes = getPostureAndGesture(person_list.at(i));
-        res.attributes.push_back(attributes);
+    ros::Subscriber depthImageSub = n.subscribe(depthImageTopic, 1, depthImageCb);
+    while ( depthImageSub.getNumPublishers() < 1 ) {
+
+    }
+    depthImageSub.shutdown();
+
+    color_client_ptr.get()->call(srv);
+    if ( srv.response.success ) {
+            cv_bridge = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
+            color_image = cv_bridge->image;
+
+
+        depth_image_mutex.lock();
+        person_list = getPersonList( color_image, depth_image );
+        depth_image_mutex.unlock();
+
+
+        for(int i = 0; i < person_list.size(); i++) {
+            attributes = getPostureAndGesture(person_list.at(i));
+            res.attributes.push_back(attributes);
+        }
     }
     return true;
 }
 
-bool getPersonAttributesCb(openpose_ros_msgs::GetPersonAttributes::Request &req, openpose_ros_msgs::GetPersonAttributes::Response &res) {
-    image_mutex.lock();
-    ROS_INFO("Called GetAttributes service.");
-    std::vector<openpose_ros_msgs::PersonDetection> person_list;
-    if(getImageByUuid(req.personId)){
-        person_list = getPersonList(input_image);
-        if (person_list.size() == 0) {
-
-            ROS_WARN("getPersonAttributesCb: No Peson found! Person list empty!");
-            image_mutex.unlock();
-            return true;
-        }
-    } else {
-        ROS_WARN("getPersonAttributesCb: No Person found with matching UUID!");
-        image_mutex.unlock();
-        return true;
-    }
-    image_mutex.unlock();
-
-    float best_confidence = 0;
-    float confidence = 0;
-    int best_confidence_index = 0;
-
-    for(int i = 0; i < person_list.size(); i++)
-    {
-        confidence += person_list.at(i).Chest.confidence;
-        confidence += person_list.at(i).LAnkle.confidence;
-        confidence += person_list.at(i).LEar.confidence;
-        confidence += person_list.at(i).LElbow.confidence;
-        confidence += person_list.at(i).LEye.confidence;
-        confidence += person_list.at(i).LHip.confidence;
-        confidence += person_list.at(i).LKnee.confidence;
-        confidence += person_list.at(i).LShoulder.confidence;
-        confidence += person_list.at(i).LWrist.confidence;
-        confidence += person_list.at(i).Neck.confidence;
-        confidence += person_list.at(i).Nose.confidence;
-        confidence += person_list.at(i).RAnkle.confidence;
-        confidence += person_list.at(i).REar.confidence;
-        confidence += person_list.at(i).RElbow.confidence;
-        confidence += person_list.at(i).REye.confidence;
-        confidence += person_list.at(i).RHip.confidence;
-        confidence += person_list.at(i).RKnee.confidence;
-        confidence += person_list.at(i).RShoulder.confidence;
-        confidence += person_list.at(i).RWrist.confidence;
-        confidence = confidence / 19;
-        if (confidence > best_confidence) {
-            best_confidence = confidence;
-            best_confidence_index = i;
-        }
-        confidence = 0;
-    }
-
-    res.attributes = getPostureAndGesture(person_list.at(best_confidence_index));
-    return true;
-}
-
-
-
-std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
+std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat color_image, cv::Mat depth_image) {
     op::Array<float> net_input_array;
     std::vector<float> scale_ratios;
 
     ROS_INFO("Converting cv image to openpose array.");
-    ROS_INFO("Im cols %d, im rows %d", image.cols, image.rows);
-    const op::Point<int> image_size{image.cols, image.rows};
+    ROS_INFO("Im cols %d, im rows %d", color_image.cols, color_image.rows);
+    const op::Point<int> image_size{color_image.cols, color_image.rows};
 
     std::vector<double> scale_input_to_net_inputs;
     std::vector<op::Point<int>> net_input_sizes;
@@ -230,7 +161,7 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
     std::tie(scale_input_to_net_inputs, net_input_sizes, scale_input_to_output, output_resolution)
         = scaleAndSizeExtractor.extract(image_size);
     // Step 3 - Format input image to OpenPose input and output formats
-    const auto netInputArray = cvMatToOpInput->createArray(image, scale_input_to_net_inputs, net_input_sizes);
+    const auto netInputArray = cvMatToOpInput->createArray(color_image, scale_input_to_net_inputs, net_input_sizes);
 
     ROS_INFO("Detect poses using forward pass.");
     poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
@@ -248,7 +179,7 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
         op::PoseCpuRenderer pose_renderer(pose_model,0.5,0.5,0.5,0.5);
         op::OpOutputToCvMat opOutputToCvMat;
         op::Array<float> output_array;
-        output_array = cvMatToOpOutput.createArray(image, scale_input_to_output, output_resolution);
+        output_array = cvMatToOpOutput.createArray(color_image, scale_input_to_output, output_resolution);
         pose_renderer.renderPose(output_array,pose_key_points,scale_input_to_output);
         auto output_image = opOutputToCvMat.formatToCvMat(output_array);
 
@@ -305,14 +236,14 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
             try {
                 printf ("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
-                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, image);
+                getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, color_image);
 
                 cv::Rect roi;
                 roi.x = crop_x;
                 roi.y = crop_y;
                 roi.width = crop_width;
                 roi.height = crop_height;
-                cv::Mat crop = image(roi);
+                cv::Mat crop = color_image(roi);
                 if(visualize){
                     cv::imshow("CLF OpenPose | gender and age input", crop);
                     cv::waitKey(3);
@@ -327,7 +258,7 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
         if(shirt_color) {
                 printf("Shirt detection is ON \n");
                 try{
-                        shirt_list.push_back(getShirtColor(person, image));
+                        shirt_list.push_back(getShirtColor(person, color_image));
                 } catch (cv::Exception e) {
 
                         std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
@@ -600,6 +531,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
     // bgr distance to prototype points
 
+     //binning binning binnig binning! do it!
+
      cv::Scalar mean_color = cv::mean(crop_img); // [0] b, [1] g, [2] r
 
 
@@ -698,14 +631,10 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "detect_people_server");
     ros::NodeHandle localNH("~");
 
-    std::string extendedPeopleTopic = "/people_tracker/people/extended";
-    localNH.param("extended_people_topic", extendedPeopleTopic, extendedPeopleTopic);
-    std::string personAttServTopic = "/open_pose/get_person_attributes";
-    localNH.param("person_attribute_service_topic", personAttServTopic, personAttServTopic);
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
-    std::string imageTopic = "/pepper_robot/sink/front/image_raw";
-    localNH.param("image_topic", imageTopic, imageTopic);
+    depthImageTopic = "/pepper_robot/sink/depth/image_raw";
+    localNH.param("depth_image_topic", depthImageTopic, depthImageTopic);
 
     int netInputSizeWidth;
     localNH.param("net_input_size_width", netInputSizeWidth, 320);
@@ -742,22 +671,19 @@ int main(int argc, char **argv) {
     localNH.param("visualize", visualize, true);
     localNH.param("visualize_uuid", visualize_uuid, false);
 
-    ros::NodeHandle n;
-    // Advertise service to get detected people poses
-    ros::ServiceServer servicePerson = n.advertiseService(personAttServTopic, getPersonAttributesCb);
-
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
-
-    // Subscriber to recieve extended person message
-    ros::Subscriber extendedPeopleSub = n.subscribe(extendedPeopleTopic, 5, peopleExtendedCb);
-
-    ros::Subscriber imageSub = n.subscribe(imageTopic, 1, imageCb);
 
     // ROS Service for age and gender detection
     if(ros::service::exists("clf_gender_age_classify_array",false)) {
         ROS_INFO("gender and age classify service exists.");
         gender_age = true;
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
+    }
+
+    // one shot picture service
+    if(ros::service::exists("color_image",false)) {
+        ROS_INFO("color image service exists.");
+        color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::ColorImage>("color_image")));
     }
 
     initializeOP();
