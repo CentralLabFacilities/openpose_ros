@@ -20,9 +20,8 @@
 #include <openpose_ros_msgs/DetectPeople.h>
 #include <openpose_ros_msgs/PersonDetection.h>
 #include <openpose_ros_msgs/BodyPartDetection.h>
-#include <openpose_ros_msgs/GetPersonAttributes.h>
-#include <openpose_ros_msgs/GetCrowdAttributes.h>
-#include <openpose_ros_msgs/PersonAttributes.h>
+#include <openpose_ros_msgs/GetCrowdAttributesWithPose.h>
+#include <openpose_ros_msgs/PersonAttributesWithPose.h>
 #include <bayes_people_tracker_msgs/PeopleTrackerImage.h>
 #include <algorithm>
 #include <math.h>
@@ -72,11 +71,11 @@ bool shirt_color = true;
 double SITTINGPERCENT = 0.4;
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
 boost::shared_ptr<ros::ServiceClient> depth_color_client_ptr;
-openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
+openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
 std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat color_image, cv::Mat depth_image);
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 openpose_ros_msgs::PersonDetection initPersonDetection();
-bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res);
+bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res);
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 
@@ -89,9 +88,9 @@ void initializeOP() {
 }
 
 
-bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
+bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
-    openpose_ros_msgs::PersonAttributes attributes;
+    openpose_ros_msgs::PersonAttributesWithPose attributes;
     pepper_clf_msgs::DepthAndColorImage srv;
     cv_bridge::CvImagePtr cv_bridge_color;
     cv_bridge::CvImagePtr cv_bridge_depth;
@@ -111,6 +110,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, o
         for(int i = 0; i < person_list.size(); i++) {
             attributes = getPostureAndGesture(person_list.at(i));
             res.attributes.push_back(attributes);
+            res.attributes.at(0).
         }
     }
     return true;
@@ -267,8 +267,8 @@ double calcAngle(cv::Point p1, cv::Point p2) {
     return std::abs(atan2(p1.y - p2.y, p1.x - p2.x) * 180 / PI);
 }
 
-openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::PersonDetection person) {
-    openpose_ros_msgs::PersonAttributes attributes;
+openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person) {
+    openpose_ros_msgs::PersonAttributesWithPose attributes;
     attributes.gender_hyp = person.gender_hyp;
     attributes.age_hyp = person.age_hyp;
     attributes.shirtcolor = person.shirtcolor;
@@ -296,8 +296,6 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
 
-    std::cout << "LHipLAnkleAngle: " << LShoulderLHipAngle << std::endl;
-    std::cout << "RHipRAnkleAngle: " << RShoulderRHipAngle << std::endl;
     std::cout << "LKnee, RKnee: " << LKnee.y << " : " << RKnee.y << std::endl;
     std::cout << "LAnkle, RAnkle: " << LAnkle.y << " : " << RAnkle.y << std::endl;
     std::cout << "LHip, RHip: " << LHip.y << " : " << RHip.y << std::endl;
@@ -309,7 +307,7 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
 
     if( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
-            && LKneeLHipDist > 0 && RKneeRHipDist > 0 ) {
+            && LKneeLHipDist > 0 && RKneeRHipDist > 0 && person.LAnkle.confidence > 0 && person.RAnkle.confidence > 0 ) {
             attributes.posture = SITTING;
     } else if( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
               std::abs(RShoulderRHipAngle - Horizontal) < std::abs(RShoulderRHipAngle - Vertical) ||
@@ -655,9 +653,9 @@ int main(int argc, char **argv) {
     }
 
     // one shot picture service
-    if(ros::service::exists("color_image",false)) {
+    if(ros::service::exists("depth_and_color_image",false)) {
         ROS_INFO("color image service exists.");
-        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::ColorImage>("color_image")));
+        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("depth_and_color_image")));
     }
 
     initializeOP();

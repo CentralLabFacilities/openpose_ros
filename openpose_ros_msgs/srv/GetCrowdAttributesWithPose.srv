@@ -1,4 +1,2 @@
-bool useHD
 ---
-string[] personId
-PersonAttributes[] attributes
+PersonAttributesWithPose[] attributes
