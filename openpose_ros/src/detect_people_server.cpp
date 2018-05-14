@@ -401,6 +401,10 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
     std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
 
+    std::cout << "LKnee, RKnee: " << LKnee.y << " : " << RKnee.y << std::endl;
+    std::cout << "LAnkle, RAnkle: " << LAnkle.y << " : " << RAnkle.y << RShoulderRHipAngle << std::endl;
+    std::cout << "LHip, RHip: " << LHip.y << " : " << RHip.y << RShoulderRHipAngle << std::endl;
+
     std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
 
     if( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
