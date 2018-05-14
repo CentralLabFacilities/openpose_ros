@@ -27,7 +27,7 @@
 #include <algorithm>
 #include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
-#include <pepper_clf_msgs/ColorImage.h>
+#include <pepper_clf_msgs/DepthAndColorImage.h>
 
 #include <ros/package.h>
 
@@ -36,10 +36,6 @@
 
 #define PI 3.14159265
 
-
-ros::NodeHandle n;
-ros::Subscriber depthImageSub;
-std::string depthImageTopic;
 
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
@@ -75,7 +71,7 @@ bool gender_age = false;
 bool shirt_color = true;
 double SITTINGPERCENT = 0.4;
 boost::shared_ptr<ros::ServiceClient> face_client_ptr;
-boost::shared_ptr<ros::ServiceClient> color_client_ptr;
+boost::shared_ptr<ros::ServiceClient> depth_color_client_ptr;
 openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
 std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat color_image, cv::Mat depth_image);
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
@@ -92,49 +88,24 @@ void initializeOP() {
     poseExtractorCaffe->initializationOnThread();
 }
 
-void depthImageCb(const sensor_msgs::ImageConstPtr &msg) {
-    cv_bridge::CvImagePtr cv_bridge;
-    try {
-        cv_bridge = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO16);
-    }
-    catch (cv_bridge::Exception &e) {
-        ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
-        return;
-    }
-    depth_image_mutex.lock();
-    depth_image = cv_bridge->image;
-//    if (visualize) {
-//        cv::imshow("CLF OpenPose | Crowd", input_image_crowd);
-//        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
-//        cv::waitKey(3);
-//    }
-    depth_image_mutex.unlock();
-
-
-}
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributes::Request &req, openpose_ros_msgs::GetCrowdAttributes::Response &res) {
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     openpose_ros_msgs::PersonAttributes attributes;
-    pepper_clf_msgs::ColorImage srv;
-    cv_bridge::CvImagePtr cv_bridge;
+    pepper_clf_msgs::DepthAndColorImage srv;
+    cv_bridge::CvImagePtr cv_bridge_color;
+    cv_bridge::CvImagePtr cv_bridge_depth;
     cv::Mat color_image;
+    cv::Mat depth_image;
 
-    ros::Subscriber depthImageSub = n.subscribe(depthImageTopic, 1, depthImageCb);
-    while ( depthImageSub.getNumPublishers() < 1 ) {
-
-    }
-    depthImageSub.shutdown();
-
-    color_client_ptr.get()->call(srv);
+    depth_color_client_ptr.get()->call(srv);
     if ( srv.response.success ) {
-            cv_bridge = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
-            color_image = cv_bridge->image;
+        cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
+        color_image = cv_bridge_color->image;
+        cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::MONO16);
+        depth_image = cv_bridge_depth->image;
 
-
-        depth_image_mutex.lock();
-        person_list = getPersonList( color_image, depth_image );
-        depth_image_mutex.unlock();
+        person_list = getPersonList(color_image, depth_image);
 
 
         for(int i = 0; i < person_list.size(); i++) {
@@ -327,6 +298,9 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
 
     std::cout << "LHipLAnkleAngle: " << LShoulderLHipAngle << std::endl;
     std::cout << "RHipRAnkleAngle: " << RShoulderRHipAngle << std::endl;
+    std::cout << "LKnee, RKnee: " << LKnee.y << " : " << RKnee.y << std::endl;
+    std::cout << "LAnkle, RAnkle: " << LAnkle.y << " : " << RAnkle.y << RShoulderRHipAngle << std::endl;
+    std::cout << "LHip, RHip: " << LHip.y << " : " << RHip.y << RShoulderRHipAngle << std::endl;
     std::cout << "LKneeLHipDist: " << LKneeLHipDist << std::endl;
     std::cout << "LAnkleLHipDist * SittingPercent: " << LAnkleLHipDist * SITTINGPERCENT << std::endl;
     std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
@@ -633,8 +607,8 @@ int main(int argc, char **argv) {
 
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
-    depthImageTopic = "/pepper_robot/sink/depth/image_raw";
-    localNH.param("depth_image_topic", depthImageTopic, depthImageTopic);
+
+    ros::NodeHandle n;
 
     int netInputSizeWidth;
     localNH.param("net_input_size_width", netInputSizeWidth, 320);
@@ -683,7 +657,7 @@ int main(int argc, char **argv) {
     // one shot picture service
     if(ros::service::exists("color_image",false)) {
         ROS_INFO("color image service exists.");
-        color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::ColorImage>("color_image")));
+        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::ColorImage>("color_image")));
     }
 
     initializeOP();
