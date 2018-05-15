@@ -51,9 +51,10 @@ op::Point<int> output_size;
 op::CvMatToOpInput *cvMatToOpInput;
 // OP OUT
 op::CvMatToOpOutput cvMatToOpOutput;
+op::OpOutputToCvMat opOutputToCvMat;
 // OP EXTRACT
 op::PoseExtractorCaffe *poseExtractorCaffe;
-
+op::PoseCpuRenderer *pose_renderer;
 std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
 double scale_gap;
@@ -245,11 +246,10 @@ std::vector<openpose_ros_msgs::PersonDetection> getPersonList(cv::Mat image) {
     }
 
     if (visualize) {
-        op::PoseCpuRenderer pose_renderer(pose_model,0.5,0.5,0.5,0.5);
-        op::OpOutputToCvMat opOutputToCvMat;
+        pose_renderer = new op::PoseCpuRenderer{pose_model,0.5,true,0.5,0.5};
         op::Array<float> output_array;
         output_array = cvMatToOpOutput.createArray(image, scale_input_to_output, output_resolution);
-        pose_renderer.renderPose(output_array,pose_key_points,scale_input_to_output);
+        pose_renderer->renderPose(output_array,pose_key_points,scale_input_to_output);
         auto output_image = opOutputToCvMat.formatToCvMat(output_array);
 
         cv::imshow("Detections", output_image);
