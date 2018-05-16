@@ -106,8 +106,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
     cv::Mat color_image;
     cv::Mat depth_image;
 
-    cv::imshow( "debug", color_image );
-    cv::waitKey(0);
     depth_color_client_ptr.get()->call(srv);
 
     if ( srv.response.success ) {
@@ -116,9 +114,12 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
         cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::MONO16);
         depth_image = cv_bridge_depth->image;
 
-        res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
+        cv::imshow( "debug", color_image );
+        cv::waitKey(0);
 
+        res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
     }
+
     return true;
 }
 
