@@ -98,6 +98,7 @@ void initializeOP() {
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
+    ROS_INFO("Crowd Attribues callback!");
     std::vector<openpose_ros_msgs::PersonAttributesWithPose> people_attributes;
     pepper_clf_msgs::DepthAndColorImage srv;
     cv_bridge::CvImagePtr cv_bridge_color;
@@ -105,7 +106,9 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
     cv::Mat color_image;
     cv::Mat depth_image;
 
-
+    cv::namedWindow( "debug", cv::WINDOW_AUTOSIZE );
+    cv::imshow( "debug", color_image );
+    cv::waitKey(0);
     depth_color_client_ptr.get()->call(srv);
 
     if ( srv.response.success ) {
@@ -122,6 +125,8 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
 // This function luckily already existed in https://github.com/introlab/find-object/blob/master/src/ros/FindObjectROS.cpp (THANKS!)
 cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy, float fx, float fy) {
+    ROS_INFO("getDepth called!");
+
     if(!(x >=0 && x<depthImage.cols && y >=0 && y<depthImage.rows))
     {
         ROS_ERROR(">>> Point must be inside the image (x=%d, y=%d), image size=(%d,%d)", x, y, depthImage.cols, depthImage.rows);
@@ -210,6 +215,8 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
 
 std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id) {
+    ROS_INFO("getPersonList called!");
+
     openpose_ros_msgs::PersonAttributesWithPose attributes;
     std::vector<openpose_ros_msgs::PersonAttributesWithPose> res;
     op::Array<float> net_input_array;
