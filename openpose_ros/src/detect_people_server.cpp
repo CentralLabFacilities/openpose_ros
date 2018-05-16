@@ -118,6 +118,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
         cv::waitKey(0);
 
         res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
+
     }
 
     return true;
@@ -210,6 +211,8 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         pt.val[2] = depth*unit_scaling;
     }
 
+    ROS_INFO("DEPTH %f %f %f", pt(0), pt(1), pt(2));
+
     return pt;
 }
 
@@ -217,7 +220,6 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id) {
     ROS_INFO("getPersonList called!");
 
-    openpose_ros_msgs::PersonAttributesWithPose attributes;
     std::vector<openpose_ros_msgs::PersonAttributesWithPose> res;
     op::Array<float> net_input_array;
     std::vector<float> scale_ratios;
@@ -363,7 +365,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     }
 
     for( int i = 0; i < person_list.size(); i++ ) {
-        attributes = getPostureAndGesture( person_list.at(i) );
+
+        openpose_ros_msgs::PersonAttributesWithPose attributes = getPostureAndGesture( person_list.at(i) );
         //HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
         cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
