@@ -108,7 +108,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
     depth_color_client_ptr.get()->call(srv);
 
-    if ( srv.response.success ) {
+    if ( true ) {
         cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
         color_image = cv_bridge_color->image;
         cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::MONO16);
