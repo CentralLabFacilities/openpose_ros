@@ -793,9 +793,9 @@ int main(int argc, char **argv) {
     }
 
     // one shot picture service
-    if(ros::service::exists("depth_and_color_image",false)) {
+    if(ros::service::exists("naoqi_driver/get_images",false)) {
         ROS_INFO("color image service exists.");
-        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("depth_and_color_image")));
+        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("naoqi_driver/get_images")));
     }
 
     initializeOP();
