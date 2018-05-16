@@ -106,7 +106,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
     cv::Mat color_image;
     cv::Mat depth_image;
 
-    cv::namedWindow( "debug", cv::WINDOW_AUTOSIZE );
     cv::imshow( "debug", color_image );
     cv::waitKey(0);
     depth_color_client_ptr.get()->call(srv);
@@ -846,15 +845,10 @@ int main(int argc, char **argv) {
         std::cout << ">>> Could not open Config file." << std::endl;
     }
 
-    if (visualize) {
-        cv::namedWindow("CLF OpenPose | Crowd", cv::WINDOW_NORMAL);
-    }
-
-    if (visualize_uuid) {
-        cv::namedWindow("CLF OpenPose | Crowd UUID", cv::WINDOW_NORMAL);
-    }
-
     ROS_INFO("Init done. Can start detecting people.");
+
+    cv::namedWindow( "debug", cv::WINDOW_AUTOSIZE );
+
     ros::spin();
 
     return 0;
