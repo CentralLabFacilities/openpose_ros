@@ -669,21 +669,18 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     std::vector<std::pair<std::string, cv::Scalar>> color_prototypes_bgr;
 
     color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(220,220,220)));
+    color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(255,255,255)));
     color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(40,40,40)));
+    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(0,0,0)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(128,128,128)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(60,60,60)));
     color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
-    color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(70,70,240)));
     color_prototypes_bgr.push_back(std::make_pair("orange",cv::Scalar(0,165,255)));
     color_prototypes_bgr.push_back(std::make_pair("yellow",cv::Scalar(0,255,255)));
     color_prototypes_bgr.push_back(std::make_pair("geen",cv::Scalar(0,255,0)));
-    color_prototypes_bgr.push_back(std::make_pair("geen",cv::Scalar(75,130,80)));
-    color_prototypes_bgr.push_back(std::make_pair("geen",cv::Scalar(82,166,73)));
     color_prototypes_bgr.push_back(std::make_pair("cyan",cv::Scalar(255,255,0)));
     color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(255,0,0)));
-    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(180,90,55)));
-    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(55,30,20)));
     color_prototypes_bgr.push_back(std::make_pair("purple",cv::Scalar(128,0,128)));
 
     std::vector<std::pair<std::string, int>> bin_color_count;
