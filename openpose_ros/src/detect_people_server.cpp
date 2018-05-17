@@ -376,6 +376,10 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         camera_pose.pose.position.x = pt(0);
         camera_pose.pose.position.y = pt(1);
         camera_pose.pose.position.z = pt(2);
+        camera_pose.orientation.x = 0.0;
+        camera_pose.orientation.y = 0.0;
+        camera_pose.orientation.z = 0.0;
+        camera_pose.orientation.w = 1.0;
 
         try{
             ROS_DEBUG("Transforming received position into BASELINK coordinate system.");
