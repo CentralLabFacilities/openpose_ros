@@ -114,9 +114,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
         cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::TYPE_16UC1);
         depth_image = cv_bridge_depth->image;
 
-        cv::imshow( "debug", color_image );
-        cv::waitKey(3);
-
         res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
 
     }
@@ -372,23 +369,24 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
         geometry_msgs::PoseStamped camera_pose;
-        geometry_msgs::PoseStamped map_pose;
-        map_pose.header.frame_id = "map";
+        geometry_msgs::PoseStamped base_link_pose;
+        base_link_pose.header.frame_id = "base_link";
         camera_pose.header.frame_id = frame_id;
+        camera_pose.header.stamp = ros::Time::now();
         camera_pose.pose.position.x = pt(0);
         camera_pose.pose.position.y = pt(1);
         camera_pose.pose.position.z = pt(2);
 
         try{
-            ROS_DEBUG("Transforming received position into map coordinate system.");
-            listener->waitForTransform(camera_pose.header.frame_id, map_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(3.0));
-            listener->transformPose(map_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, map_pose);
+            ROS_DEBUG("Transforming received position into BASELINK coordinate system.");
+            listener->waitForTransform(camera_pose.header.frame_id, base_link_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(3.0));
+            listener->transformPose(base_link_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, base_link_pose);
         } catch(tf::TransformException ex) {
             ROS_WARN("Failed transform: %s", ex.what());
-            map_pose = camera_pose;
+            base_link_pose = camera_pose;
         }
 
-        attributes.pose_stamped = map_pose;
+        attributes.pose_stamped = base_link_pose;
 
         res.push_back( attributes );
 
