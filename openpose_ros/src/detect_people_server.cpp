@@ -618,8 +618,11 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         return "NO_BOUNDING_BOX";
     }
 
-     cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
-     cv::waitKey(3);
+//    if(visualize) {
+        cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
+        cv::waitKey(3);
+//    }
+
 
     //------HSV------
 //    cv::Mat hsv_crop_img;
@@ -649,34 +652,27 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 //    if( BLUE <= mean_color[0]  && mean_color[0] < PURPLE )
 //        return "purple";
 
-     std::vector<cv::Scalar> mean_colors; //= cv::mean(crop_img); // [0] b, [1] g, [2] r
-     cv::Mat mask = cv::Mat::zeros(crop_img.size(), crop_img.type());
-     int GRID_SIZE = 20;
+     std::vector<std::pair<std::string, cv::Scalar>> mean_colors; // [0] b, [1] g, [2] r
+     cv::Mat mask;
+
+     int GRID_SIZE = floor(crop_img.cols/10);
 
      for ( int y = 0; y <  crop_img.rows - GRID_SIZE; y += GRID_SIZE ) {
          for ( int x = 0; x < crop_img.cols - GRID_SIZE; x += GRID_SIZE ) {
-             int k = x*y + x;
+             mask = cv::Mat::zeros(crop_img.size(), CV_8UC1);
              cv::Rect grid_rect( x, y, GRID_SIZE, GRID_SIZE );
-             cv::rectangle( mask, grid_rect, cv::Scalar(255, 0, 0), CV_FILLED );
-             mean_colors.push_back( cv::mean( crop_img,mask ) );
-
-             cv::imshow( "src", crop_img );
-             cv::imshow( cv::format( "grid%d",k ), crop_img( grid_rect ) );
-             cv::waitKey();
-
+             cv::rectangle( mask, grid_rect, 255, CV_FILLED );
+             mean_colors.push_back( std::make_pair( "", cv::mean( crop_img,mask ) ) );
          }
      }
-
-    // cv::Scalar mean_color = cv::mean(crop_img); // [0] b, [1] g, [2] r
-
 
     std::vector<std::pair<std::string, cv::Scalar>> color_prototypes_bgr;
 
     color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(220,220,220)));
-    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(60,60,60)));
     color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(40,40,40)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(128,128,128)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
+    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(60,60,60)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(190,190,190)));
     color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
     color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(70,70,240)));
@@ -691,17 +687,45 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(55,30,20)));
     color_prototypes_bgr.push_back(std::make_pair("purple",cv::Scalar(128,0,128)));
 
+    std::vector<std::pair<std::string, int>> bin_color_count;
+    bin_color_count.push_back(std::make_pair("white", 0));
+    bin_color_count.push_back(std::make_pair("black", 0));
+    bin_color_count.push_back(std::make_pair("grey", 0));
+    bin_color_count.push_back(std::make_pair("red", 0));
+    bin_color_count.push_back(std::make_pair("orange", 0));
+    bin_color_count.push_back(std::make_pair("yellow", 0));
+    bin_color_count.push_back(std::make_pair("green", 0));
+    bin_color_count.push_back(std::make_pair("cyan", 0));
+    bin_color_count.push_back(std::make_pair("blue", 0));
+    bin_color_count.push_back(std::make_pair("purple", 0));
+
     double result_val = 999;
-    std::string result_color = "no color";
-    for (size_t i=0; i<color_prototypes_bgr.size(); i++) {
-        std::cout << "DISTANCE TO " << color_prototypes_bgr.at(i).first << ": " << cv::norm(mean_colors.at(0),color_prototypes_bgr.at(i).second,cv::NORM_L2) << std::endl;
-        if (result_val > cv::norm(mean_colors.at(0),color_prototypes_bgr.at(i).second,cv::NORM_L2)) {
-            result_val = cv::norm(mean_colors.at(0),color_prototypes_bgr.at(i).second,cv::NORM_L2);
-            result_color = color_prototypes_bgr.at(i).first;
+    for ( size_t k=0; k<mean_colors.size(); k++ ) {
+
+        for ( size_t i=0; i<color_prototypes_bgr.size(); i++ ) {
+            if ( result_val > cv::norm(mean_colors.at(k).second,color_prototypes_bgr.at(i).second,cv::NORM_L2) ) {
+                result_val = cv::norm(mean_colors.at(k).second,color_prototypes_bgr.at(i).second,cv::NORM_L2 );
+                mean_colors.at(k).first = color_prototypes_bgr.at(i).first;
+            }
         }
+
+        for(size_t j = 0; j < bin_color_count.size(); j++){
+            if(bin_color_count.at(j).first == mean_colors.at(k).first)
+                bin_color_count.at(j).second++;
+        }
+        result_val = 999;
     }
-    std::cout << "SHIRT COLOR BGR VALUE: " << mean_colors.at(0)[0] << ":" << mean_colors.at(0)[1] << ":" << mean_colors.at(0)[2] << std::endl;
-    std::cout << "SHIRT COLOR DETECTION RESULT: " << result_color << std::endl;
+
+
+    std::string result_color = "no color";
+    int max = 0;
+    for(size_t i = 0; i < bin_color_count.size(); i++){
+        if(bin_color_count.at(i).second > max)
+            result_color = bin_color_count.at(i).first;
+    }
+
+//    std::cout << "SHIRT COLOR BGR VALUE: " << mean_colors.at(0)[0] << ":" << mean_colors.at(0)[1] << ":" << mean_colors.at(0)[2] << std::endl;
+//    std::cout << "SHIRT COLOR DETECTION RESULT: " << result_color << std::endl;
 
     return result_color;
 }
@@ -794,17 +818,14 @@ int main(int argc, char **argv) {
     localNH.param("scale_gap", scale_gap, 0.3);
 
     pose_model = op::PoseModel::COCO_18;
-
-    std::string path_to_config;
     localNH.param("models_folder", models_folder, std::string("/home/nao/ros_distro/share/openpose/models/"));
-
-    localNH.param("path_to_config", path_to_config, std::string("/vol/pepper/systems/pepper-robocup-nightly/share/pepper_perception_configs/vision/openpose_ros/shirtcolor.yaml"));
 
     localNH.param("gpu_id", gpu_id, 0);
 
     coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
     localNH.param("visualize", visualize, true);
+
     localNH.param("visualize_uuid", visualize_uuid, false);
 
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
@@ -824,44 +845,6 @@ int main(int argc, char **argv) {
 
     initializeOP();
 
-    //READING CONFIG FILE
-    cv::FileStorage fs(path_to_config, cv::FileStorage::READ);
-
-    if (fs.isOpened()) {
-
-        fs["white"] >> WHITE;
-        std::cout << ">>> White value: --> " << WHITE << std::endl;
-
-        fs["black"] >> BLACK;
-        std::cout << ">>> Black value: --> " << BLACK << std::endl;
-
-        fs["grey"] >> GREY;
-        std::cout << ">>> Grey value: --> " << GREY << std::endl;
-
-        fs["red"] >> RED;
-        std::cout << ">>> Red value: --> " << RED << std::endl;
-
-        fs["orange"] >> ORANGE;
-        std::cout << ">>> Orange value: --> " << ORANGE << std::endl;
-
-        fs["yellow"] >> YELLOW;
-        std::cout << ">>> Yellow value: --> " << YELLOW << std::endl;
-
-        fs["green"] >> GREEN;
-        std::cout << ">>> Green value: --> " << GREEN << std::endl;
-
-        fs["cyan"] >> CYAN;
-        std::cout << ">>> Cyan value: --> " << CYAN << std::endl;
-
-        fs["blue"] >> BLUE;
-        std::cout << ">>> Blue: --> " << BLUE << std::endl;
-
-        fs["purple"] >> PURPLE;
-        std::cout << ">>> Purple: --> " << PURPLE << std::endl;
-
-    } else {
-        std::cout << ">>> Could not open Config file." << std::endl;
-    }
 
     ROS_INFO("Init done. Can start detecting people.");
 
