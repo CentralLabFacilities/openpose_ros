@@ -660,9 +660,9 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
              cv::rectangle( mask, grid_rect, cv::Scalar(255, 0, 0), CV_FILLED );
              mean_colors.push_back( cv::mean( crop_img,mask ) );
 
-             cv::imshow("src", crop_img);
-             cv::imshow(cv::format("grid%d",k), crop_img(grid_rect));
-             cv::waitKey(3);
+             cv::imshow( "src", crop_img );
+             cv::imshow( cv::format( "grid%d",k ), crop_img( grid_rect ) );
+             cv::waitKey();
 
          }
      }
@@ -864,8 +864,6 @@ int main(int argc, char **argv) {
     }
 
     ROS_INFO("Init done. Can start detecting people.");
-
-    cv::namedWindow( "debug", cv::WINDOW_AUTOSIZE );
 
     ros::spin();
 
