@@ -99,7 +99,6 @@ void initializeOP() {
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
     ROS_INFO("Crowd Attribues callback!");
-    std::vector<openpose_ros_msgs::PersonAttributesWithPose> people_attributes;
     pepper_clf_msgs::DepthAndColorImage srv;
     cv_bridge::CvImagePtr cv_bridge_color;
     cv_bridge::CvImagePtr cv_bridge_depth;
@@ -108,14 +107,15 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
     depth_color_client_ptr.get()->call(srv);
 
-    if ( true ) {
+    if ( srv.response.success ) {
+
         cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
         color_image = cv_bridge_color->image;
         cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::TYPE_16UC1);
         depth_image = cv_bridge_depth->image;
 
         cv::imshow( "debug", color_image );
-        cv::waitKey(0);
+        cv::waitKey(3);
 
         res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
 
@@ -126,7 +126,6 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
 // This function luckily already existed in https://github.com/introlab/find-object/blob/master/src/ros/FindObjectROS.cpp (THANKS!)
 cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy, float fx, float fy) {
-    ROS_INFO("getDepth called!");
 
     if(!(x >=0 && x<depthImage.cols && y >=0 && y<depthImage.rows))
     {
@@ -218,7 +217,6 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
 
 std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id) {
-    ROS_INFO("getPersonList called!");
 
     std::vector<openpose_ros_msgs::PersonAttributesWithPose> res;
     op::Array<float> net_input_array;
@@ -388,11 +386,12 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         } catch(tf::TransformException ex) {
             ROS_WARN("Failed transform: %s", ex.what());
             map_pose = camera_pose;
-            continue;
         }
 
         attributes.pose_stamped = map_pose;
+
         res.push_back( attributes );
+
     }
 
     return res;
