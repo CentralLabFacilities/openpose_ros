@@ -694,13 +694,13 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     double result_val = 999;
     std::string result_color = "no color";
     for (size_t i=0; i<color_prototypes_bgr.size(); i++) {
-        std::cout << "DISTANCE TO " << color_prototypes_bgr.at(i).first << ": " << cv::norm(mean_color,color_prototypes_bgr.at(i).second,cv::NORM_L2) << std::endl;
-        if (result_val > cv::norm(mean_color,color_prototypes_bgr.at(i).second,cv::NORM_L2)) {
-            result_val = cv::norm(mean_color,color_prototypes_bgr.at(i).second,cv::NORM_L2);
+        std::cout << "DISTANCE TO " << color_prototypes_bgr.at(i).first << ": " << cv::norm(mean_colors.at(0),color_prototypes_bgr.at(i).second,cv::NORM_L2) << std::endl;
+        if (result_val > cv::norm(mean_colors.at(0),color_prototypes_bgr.at(i).second,cv::NORM_L2)) {
+            result_val = cv::norm(mean_colors.at(0),color_prototypes_bgr.at(i).second,cv::NORM_L2);
             result_color = color_prototypes_bgr.at(i).first;
         }
     }
-    std::cout << "SHIRT COLOR BGR VALUE: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl;
+    std::cout << "SHIRT COLOR BGR VALUE: " << mean_colors.at(0)[0] << ":" << mean_colors.at(0)[1] << ":" << mean_colors.at(0)[2] << std::endl;
     std::cout << "SHIRT COLOR DETECTION RESULT: " << result_color << std::endl;
 
     return result_color;
