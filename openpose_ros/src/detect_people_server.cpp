@@ -649,12 +649,25 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 //    if( BLUE <= mean_color[0]  && mean_color[0] < PURPLE )
 //        return "purple";
 
+     std::vector<cv::Scalar> mean_colors; //= cv::mean(crop_img); // [0] b, [1] g, [2] r
+     cv::Mat mask = cv::Mat::zeros(crop_img.size(), crop_img.type());
+     int GRID_SIZE = 20;
 
-    // bgr distance to prototype points
+     for ( int y = 0; y <  crop_img.rows - GRID_SIZE; y += GRID_SIZE ) {
+         for ( int x = 0; x < crop_img.cols - GRID_SIZE; x += GRID_SIZE ) {
+             int k = x*y + x;
+             cv::Rect grid_rect( x, y, GRID_SIZE, GRID_SIZE );
+             cv::rectangle( mask, grid_rect, cv::Scalar(255, 0, 0), CV_FILLED );
+             mean_colors.push_back( cv::mean( crop_img,mask ) );
 
-     //binning binning binnig binning! do it!
+             cv::imshow("src", crop_img);
+             cv::imshow(cv::format("grid%d",k), crop_img(grid_rect));
+             cv::waitKey(3);
 
-     cv::Scalar mean_color = cv::mean(crop_img); // [0] b, [1] g, [2] r
+         }
+     }
+
+    // cv::Scalar mean_color = cv::mean(crop_img); // [0] b, [1] g, [2] r
 
 
     std::vector<std::pair<std::string, cv::Scalar>> color_prototypes_bgr;
