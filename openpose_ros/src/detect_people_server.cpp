@@ -673,7 +673,6 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(128,128,128)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(60,60,60)));
-    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(190,190,190)));
     color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
     color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(70,70,240)));
     color_prototypes_bgr.push_back(std::make_pair("orange",cv::Scalar(0,165,255)));
