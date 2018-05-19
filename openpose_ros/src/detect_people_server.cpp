@@ -404,7 +404,8 @@ double calcAngle(cv::Point p1, cv::Point p2) {
 }
 
 openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person) {
-    openpose_ros_msgs::PersonAttributesWithPose attributes;
+    openpose_ros_msgs::PersonAttributesWithPose attributesWithPose;
+    openpose_ros_msgs::PersonAttributes attributes;
     attributes.gender_hyp = person.gender_hyp;
     attributes.age_hyp = person.age_hyp;
     attributes.shirtcolor = person.shirtcolor;
@@ -467,7 +468,8 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     }
     std::cout << "Gesture: \t" << attributes.gesture << std::endl;
     std::cout << "posture: \t" << attributes.posture << std::endl;
-    return attributes;
+    attributesWithPose.attributes = attributes;
+    return attributesWithPose;
 }
 
 openpose_ros_msgs::PersonDetection initPersonDetection() {
