@@ -172,11 +172,15 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
             }
         }
 
-        std::sort (valueList.begin(), valueList.end());
-        float median = valueList[(int)(valueList.size()/2)];
-        depth = median;
-        ROS_DEBUG("%f", depth);
-        isValid = depth != 0.0f;
+        if(valueList.size() > 0) {
+            std::sort (valueList.begin(), valueList.end());
+            float median = valueList[(int)(valueList.size()/2)];
+            depth = median;
+            ROS_DEBUG("%f", depth);
+            isValid = true;
+        }
+        depth = 0;
+        isValid = false;
 
     } else {
         ROS_DEBUG(">>> Image is in Meters");
