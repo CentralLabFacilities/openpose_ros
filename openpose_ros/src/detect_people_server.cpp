@@ -159,9 +159,13 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         // Sample fore depth points to the right, left, top and down
         for (int i=0; i<5; i++) {
             depth_samples[i] = (float)depthImage.at<uint16_t>(y,x+i);
+            ROS_DEBUG("%f", depth_samples[i]);
             depth_samples[i+5] = (float)depthImage.at<uint16_t>(y,x-i);
+            ROS_DEBUG("%f", depth_samples[i+5]);
             depth_samples[i+10] = (float)depthImage.at<uint16_t>(y+i,x);
+            ROS_DEBUG("%f", depth_samples[i+10]);
             depth_samples[i+15] = (float)depthImage.at<uint16_t>(y-i,x);
+            ROS_DEBUG("%f", depth_samples[i+15]);
         }
 
         depth_samples[20] = (float)depthImage.at<uint16_t>(y, x);
