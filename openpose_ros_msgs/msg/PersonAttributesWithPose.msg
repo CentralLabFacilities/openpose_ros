@@ -1,2 +1,3 @@
 geometry_msgs/PoseStamped pose_stamped
+geometry_msgs/PoseStamped head_pose_stamped
 openpose_ros_msgs/PersonAttributes attributes
