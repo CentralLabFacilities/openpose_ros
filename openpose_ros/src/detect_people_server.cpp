@@ -158,19 +158,25 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         // Sample fore depth points to the right, left, top and down
         std::vector<float> valueList;
         for (int i=0; i<5; i++) {
+            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y,x+i));
             if((float)depthImage.at<uint16_t>(y,x+i) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y,x+i));
             }
+            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y,x-i));
             if((float)depthImage.at<uint16_t>(y,x-i) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y,x-i));
             }
+            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y+i,x));
             if((float)depthImage.at<uint16_t>(y+i,x) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y+i,x));
             }
+            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y-i,x));
             if((float)depthImage.at<uint16_t>(y-i,x) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y-i,x));
             }
         }
+
+        ROS_DEBUG("Sampled %d values", valueList.size());
 
         if(valueList.size() > 0) {
             std::sort (valueList.begin(), valueList.end());
