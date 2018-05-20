@@ -404,7 +404,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
-        cv::Rect roidepthhead(roiHead.x/2,roiHead.y/2,roiHead.width/2, roiHead.height/2);
+        cv::Rect roidepthhead(0,0,29, 28);
         cv::Mat head_crop(depth_image.size(), CV_8UC3);
         cv::cvtColor(depth_image, head_crop, CV_GRAY2RGB);
         cv::rectangle(head_crop,roidepthhead,(0,255,0),3);
