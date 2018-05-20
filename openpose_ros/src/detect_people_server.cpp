@@ -370,6 +370,11 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (640/320), (roi.y + roi.height/2) / (480/240),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
+        cv::Rect roidepth(roi.x/2,roi.y/2,roi.width/2, roi.height/2);
+        cv::Mat body_crop = depth_image(roidepth);
+        cv::imshow("Body Crop", body_crop);
+        cv::waitKey(3);
+
         geometry_msgs::PoseStamped camera_pose;
         geometry_msgs::PoseStamped base_link_pose;
         base_link_pose.header.frame_id = "base_link";
@@ -396,6 +401,11 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+
+        cv::Rect roidepthhead(roiHead.x/2,roiHead.y/2,roiHead.width/2, roiHead.height/2);
+        cv::Mat head_crop = depth_image(roidepthhead);
+        cv::imshow("Head Crop", head_crop);
+        cv::waitKey(3);
 
         geometry_msgs::PoseStamped camera_pose_head;
         geometry_msgs::PoseStamped base_link_pose_head;
