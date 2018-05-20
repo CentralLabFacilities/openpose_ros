@@ -776,38 +776,27 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 }
 
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
-    printf ("getHeadBounds()");
     int amount = ceil(person.Nose.confidence) + ceil(person.REar.confidence) + ceil(person.REye.confidence) + ceil(person.LEar.confidence) + ceil(person.LEye.confidence);
-    float uf = person.Nose.u + person.REar.u + person.REye.u + person.LEar.u + person.LEye.u;
-    float vf = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
+     float vf = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
 
     if (amount <= 1)    {
         x = y = width = height = 1;
         return;
     }
-    int u = floor(uf / amount);
-    int v = floor(vf / amount);
-    printf ("u: %d", u);
-    printf ("v: %d", v);
-    // u and v are now the center of the head.
 
     std::list<int> distlist_x;
-    std::list<int> distlist_y;
-    if (person.Nose.u != 0) {distlist_x.push_back(std::abs(person.Nose.u - u));}
-    if (person.REar.u != 0) {distlist_x.push_back(std::abs(person.REar.u - u));}
-    if (person.REye.u != 0) {distlist_x.push_back(std::abs(person.REye.u - u));}
-    if (person.LEar.u != 0) {distlist_x.push_back(std::abs(person.LEar.u - u));}
-    if (person.LEye.u != 0) {distlist_x.push_back(std::abs(person.LEye.u - u));}
+    if (person.Nose.u != 0) {distlist_x.push_back(std::abs(person.Nose.u));}
+    if (person.REar.u != 0) {distlist_x.push_back(std::abs(person.REar.u));}
+    if (person.REye.u != 0) {distlist_x.push_back(std::abs(person.REye.u));}
+    if (person.LEar.u != 0) {distlist_x.push_back(std::abs(person.LEar.u));}
+    if (person.LEye.u != 0) {distlist_x.push_back(std::abs(person.LEye.u));}
     int max_dist_u = *std::max_element(distlist_x.begin(),distlist_x.end());
-    printf ("max_dist_u: %d", max_dist_u);
-    x = std::max(u - max_dist_u, 0);
-    y = std::max(v - (int)ceil(max_dist_u*1.5), 0);
-    printf ("x: %d", x);
-    printf ("y: %d", y);
-    width = max_dist_u*2;
-    height = max_dist_u*3;
-    printf ("width: %d", width);
-    printf ("height: %d", height);
+    int min_dist_u = *std::min_element(distlist_x.begin(),distlist_x.end());
+
+    x = min_dist_u;
+    width = max_dist_u - min_dist_u;
+    height = width * 1.5;
+    y = vf - height/2;
 
     if (image.size().width <= (x+width)) {
         width -= (x+width - image.size().width);
