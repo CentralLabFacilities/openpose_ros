@@ -124,6 +124,8 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 // This function luckily already existed in https://github.com/introlab/find-object/blob/master/src/ros/FindObjectROS.cpp (THANKS!)
 cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy, float fx, float fy) {
 
+    ROS_INFO("getDepth called x: %d y: %d", x, y);
+
     if(!(x >=0 && x<depthImage.cols && y >=0 && y<depthImage.rows))
     {
         ROS_ERROR(">>> Point must be inside the image (x=%d, y=%d), image size=(%d,%d)", x, y, depthImage.cols, depthImage.rows);
@@ -151,7 +153,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
     bool isValid;
 
     if(isInMM) {
-        // ROS_DEBUG(">>> Image is in Millimeters");
+        ROS_DEBUG(">>> Image is in Millimeters");
         float depth_samples[21];
 
         // Sample fore depth points to the right, left, top and down
@@ -173,7 +175,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         isValid = depth != 0.0f;
 
     } else {
-        // ROS_DEBUG(">>> Image is in Meters");
+        ROS_DEBUG(">>> Image is in Meters");
         float depth_samples[21];
 
         // Sample fore depth points to the right, left, top and down
@@ -365,7 +367,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         //HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
         cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
-        cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (640/320), (roi.y + roi.height/2) / (640/320),
+        cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (640/320), (roi.y + roi.height/2) / (480/240),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
         geometry_msgs::PoseStamped camera_pose;
@@ -392,7 +394,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         ROS_INFO("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
 
-        cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (640/320),
+        cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
         geometry_msgs::PoseStamped camera_pose_head;
