@@ -381,16 +381,43 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         camera_pose.pose.orientation.z = 0.0;
         camera_pose.pose.orientation.w = 1.0;
 
+        int crop_x, crop_y, crop_width, crop_height;
+        getHeadBounds(person_list.at(1),crop_x, crop_y, crop_width, crop_height, color_image);
+        cv::Rect roiHead;
+        roiHead.x = crop_x;
+        roiHead.y = crop_y;
+        roiHead.width = crop_width;
+        roiHead.height = crop_height;
+
+        cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (640/320),
+                                 161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+
+        geometry_msgs::PoseStamped camera_pose_head;
+        geometry_msgs::PoseStamped base_link_pose_head;
+        base_link_pose_head.header.frame_id = "base_link";
+        camera_pose_head.header.frame_id = frame_id;
+        camera_pose_head.header.stamp = ros::Time::now();
+        camera_pose_head.pose.position.x = pt_head(0);
+        camera_pose_head.pose.position.y = pt_head(1);
+        camera_pose_head.pose.position.z = pt_head(2);
+        camera_pose_head.pose.orientation.x = 0.0;
+        camera_pose_head.pose.orientation.y = 0.0;
+        camera_pose_head.pose.orientation.z = 0.0;
+        camera_pose_head.pose.orientation.w = 1.0;
+
         try{
             ROS_DEBUG("Transforming received position into BASELINK coordinate system.");
             listener->waitForTransform(camera_pose.header.frame_id, base_link_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(3.0));
             listener->transformPose(base_link_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, base_link_pose);
+            listener->transformPose(base_link_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, base_link_pose_head);
         } catch(tf::TransformException ex) {
             ROS_WARN("Failed transform: %s", ex.what());
             base_link_pose = camera_pose;
+            base_link_pose_head = camera_pose_head;
         }
 
         attributes.pose_stamped = base_link_pose;
+        attributes.head_pose_stamped = base_link_pose_head;
 
         res.push_back( attributes );
 
