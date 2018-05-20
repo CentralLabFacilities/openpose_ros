@@ -372,7 +372,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         cv::Rect roidepth(roi.x/2,roi.y/2,roi.width/2, roi.height/2);
         cv::Mat body_crop = depth_image.clone();
-        cv::rectangle(body_crop,roidepth,(255,255,255),3);
+        cv::rectangle(body_crop,roidepth,255,3);
         cv::imshow("Body Crop", body_crop);
         cv::waitKey(3);
 
@@ -405,7 +405,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         cv::Rect roidepthhead(roiHead.x/2,roiHead.y/2,roiHead.width/2, roiHead.height/2);
         cv::Mat head_crop = depth_image.clone();
-        cv::rectangle(head_crop,roidepthhead,(255,255,255),3);
+        cv::rectangle(head_crop,roidepthhead,255,3);
         cv::imshow("Head Crop", head_crop);
         cv::waitKey(3);
 
