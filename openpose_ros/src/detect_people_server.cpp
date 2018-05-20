@@ -371,10 +371,11 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
         cv::Rect roidepth = cv::Rect(roi.x/2,roi.y/2,roi.width/2, roi.height/2);
-        cv::Mat body_crop(depth_image.size(), CV_8UC3);
-        cv::cvtColor(depth_image, body_crop, CV_GRAY2RGB);
-        cv::rectangle(body_crop,roi,cv::Scalar(0,255,0),3);
-        cv::imshow("Body Crop", body_crop);
+        /*cv::Mat body_crop(depth_image.size(), CV_8UC3);
+        cv::cvtColor(depth_image, body_crop, CV_GRAY2RGB);*/
+        cv::Mat bla = color_image.clone();
+        cv::rectangle(bla,roi,cv::Scalar(0,255,0),3);
+        cv::imshow("Body Crop", bla);
         cv::waitKey(3);
 
         geometry_msgs::PoseStamped camera_pose;
