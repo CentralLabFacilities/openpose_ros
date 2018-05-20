@@ -178,7 +178,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
         ROS_DEBUG("Sampled %d values", valueList.size());
 
-        if(valueList.size() > 0) {
+        if(!valueList.empty()) {
             std::sort (valueList.begin(), valueList.end());
             float median = valueList[(int)(valueList.size()/2)];
             depth = median;
