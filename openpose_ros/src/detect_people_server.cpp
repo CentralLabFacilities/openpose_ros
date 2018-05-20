@@ -777,7 +777,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image){
     int amount = ceil(person.Nose.confidence) + ceil(person.REar.confidence) + ceil(person.REye.confidence) + ceil(person.LEar.confidence) + ceil(person.LEye.confidence);
-     float vf = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
+    float vf = person.Nose.v + person.REar.v + person.REye.v + person.LEar.v + person.LEye.v;
+    int v = floor(vf / amount);
 
     if (amount <= 1)    {
         x = y = width = height = 1;
@@ -796,7 +797,7 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
     x = min_dist_u;
     width = max_dist_u - min_dist_u;
     height = width * 1.5;
-    y = vf - height/2;
+    y = v - height/2;
 
     if (image.size().width <= (x+width)) {
         width -= (x+width - image.size().width);
