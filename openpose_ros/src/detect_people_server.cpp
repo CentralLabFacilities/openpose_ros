@@ -382,7 +382,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         camera_pose.pose.orientation.w = 1.0;
 
         int crop_x, crop_y, crop_width, crop_height;
-        getHeadBounds(person_list.at(1),crop_x, crop_y, crop_width, crop_height, color_image);
+        ROS_INFO("Calling get head bounds");
+        getHeadBounds(person_list.at(i),crop_x, crop_y, crop_width, crop_height, color_image);
         cv::Rect roiHead;
         roiHead.x = crop_x;
         roiHead.y = crop_y;
