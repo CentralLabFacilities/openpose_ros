@@ -154,26 +154,26 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
     if(isInMM) {
         ROS_DEBUG(">>> Image is in Millimeters");
-        float depth_samples[21];
 
         // Sample fore depth points to the right, left, top and down
+        std::vector<float> valueList;
         for (int i=0; i<5; i++) {
-            depth_samples[i] = (float)depthImage.at<uint16_t>(y,x+i);
-            ROS_DEBUG("%f", depth_samples[i]);
-            depth_samples[i+5] = (float)depthImage.at<uint16_t>(y,x-i);
-            ROS_DEBUG("%f", depth_samples[i+5]);
-            depth_samples[i+10] = (float)depthImage.at<uint16_t>(y+i,x);
-            ROS_DEBUG("%f", depth_samples[i+10]);
-            depth_samples[i+15] = (float)depthImage.at<uint16_t>(y-i,x);
-            ROS_DEBUG("%f", depth_samples[i+15]);
+            if((float)depthImage.at<uint16_t>(y,x+i) != 0){
+                valueList.push_back((float)depthImage.at<uint16_t>(y,x+i));
+            }
+            if((float)depthImage.at<uint16_t>(y,x-i) != 0){
+                valueList.push_back((float)depthImage.at<uint16_t>(y,x-i));
+            }
+            if((float)depthImage.at<uint16_t>(y+i,x) != 0){
+                valueList.push_back((float)depthImage.at<uint16_t>(y+i,x));
+            }
+            if((float)depthImage.at<uint16_t>(y-i,x) != 0){
+                valueList.push_back((float)depthImage.at<uint16_t>(y-i,x));
+            }
         }
 
-        depth_samples[20] = (float)depthImage.at<uint16_t>(y, x);
-
-        int arr_size = sizeof(depth_samples)/sizeof(float);
-        std::sort(&depth_samples[0], &depth_samples[arr_size]);
-        float median = arr_size % 2 ? depth_samples[arr_size/2] : (depth_samples[arr_size/2-1] + depth_samples[arr_size/2]) / 2;
-
+        std::sort (valueList.begin(), valueList.end());
+        float median = valueList[(int)(valueList.size()/2)];
         depth = median;
         ROS_DEBUG("%f", depth);
         isValid = depth != 0.0f;
