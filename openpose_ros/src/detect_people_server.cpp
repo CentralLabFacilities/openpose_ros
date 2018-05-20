@@ -389,6 +389,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         roiHead.width = crop_width;
         roiHead.height = crop_height;
 
+        ROS_INFO("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
+
         cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (640/320),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
