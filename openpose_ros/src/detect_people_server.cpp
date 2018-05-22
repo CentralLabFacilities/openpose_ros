@@ -651,7 +651,7 @@ cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
     if ((cropwidth <= 0) || (cropheight <= 0) || (cropx <= 0) || (cropy <= 0))	{
         printf("width or height <= 0");
-        cropx = cropy = cropwidth = cropheight = 1;
+        cropx = cropy = cropwidth = cropheight = 0;
     }
 
     roi.x = cropx;
@@ -666,7 +666,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 	printf ("getShirtColor() \n");
     cv::Rect roi = getUpperBodyRoi(person, image);
 
-    if (roi.x == 0 && roi.y == 0 && roi.width == 0 && roi.height == 0 )
+    if (roi.x <= 0 || roi.y <= 0 || roi.width <= 0 || roi.height <= 0 )
         return "NO_BOUNDING_BOX";
 
     cv::Mat crop_img = image;
