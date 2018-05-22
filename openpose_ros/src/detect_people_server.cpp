@@ -732,9 +732,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(255,255,255)));
     color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(40,40,40)));
     color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(0,0,0)));
-    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(128,128,128)));
+    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(100,100,100)));
     color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
-    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(60,60,60)));
     color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
     color_prototypes_bgr.push_back(std::make_pair("orange",cv::Scalar(0,165,255)));
     color_prototypes_bgr.push_back(std::make_pair("yellow",cv::Scalar(0,255,255)));
@@ -755,7 +754,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     bin_color_count.push_back(std::make_pair("blue", 0));
     bin_color_count.push_back(std::make_pair("purple", 0));
 
-    double result_val = 999;
+    double result_val = 9999;
     for ( size_t k=0; k<mean_colors.size(); k++ ) {
 
         for ( size_t i=0; i<color_prototypes_bgr.size(); i++ ) {
@@ -769,7 +768,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
             if(bin_color_count.at(j).first == mean_colors.at(k).first)
                 bin_color_count.at(j).second++;
         }
-        result_val = 999;
+        result_val = 9999;
     }
 
 
