@@ -664,9 +664,12 @@ cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 std::string getPixelColorType(cv::Scalar hsv_val)
 {
-    int H = hsv_val[0];
-    int S = hsv_val[1];
-    int V = hsv_val[2];
+    double H = hsv_val[0];
+    double S = hsv_val[1];
+    double V = hsv_val[2];
+
+
+    std::cout << "HSV: " << hsv_val[0] << " " << hsv_val[1] << " " << hsv_val[2] << std::endl;
 
     std::string color;
     if (V < 75)
