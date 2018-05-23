@@ -727,8 +727,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 
     //------HSV------
-//    cv::Mat hsv_crop_img;
-//    cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
+    cv::Mat hsv_crop_img;
+    cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
 //    cv::Scalar mean_color = cv::mean(hsv_crop_img); // [0] h, [1] s, [2] v
 
 //    std::cout << std::endl << std::endl <<  "HSV VALUES: " << mean_color[0] << ":" << mean_color[1] << ":" << mean_color[2] << std::endl << std::endl;
@@ -775,11 +775,8 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
          for ( int x = 0; x < crop_img.cols - GRID_SIZE; x += GRID_SIZE ) {
              mask = cv::Mat::zeros(crop_img.size(), CV_8UC1);
              cv::Rect grid_rect( x, y, GRID_SIZE, GRID_SIZE );
-             cv::rectangle( mask, grid_rect, 255, CV_FILLED );
-             cv::Mat hsv_cell;
-             crop_img.copyTo(hsv_cell,mask);
-             cv::cvtColor(hsv_cell, hsv_cell, CV_BGR2HSV);\
-             bin_colors[getPixelColorType(cv::mean(hsv_cell))]++;
+             cv::rectangle( mask, grid_rect, 255, CV_FILLED );     
+             bin_colors[getPixelColorType(cv::mean(hsv_crop_img,mask))]++;
          }
      }
 
