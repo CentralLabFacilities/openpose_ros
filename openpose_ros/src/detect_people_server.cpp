@@ -669,6 +669,11 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     if (roi.x <= 0 || roi.y <= 0 || roi.width <= 0 || roi.height <= 0 )
         return "NO_BOUNDING_BOX";
 
+    if (roi.width < 10 )
+        roi.width = 10;
+    if ( roi.height < 10 )
+        roi.height = 10;
+
     cv::Mat crop_img = image;
 	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
     try {
