@@ -662,6 +662,40 @@ cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat ima
     return roi;
 }
 
+std::string getPixelColorType(cv::Scalar hsv_val)
+{
+    int H = hsv_val[0];
+    int S = hsv_val[1];
+    int V = hsv_val[2];
+
+    std::string color;
+    if (V < 75)
+        color = "black";
+    else if (V > 190 && S < 27)
+        color = "white";
+    else if (S < 53 && V < 185)
+        color = "grey";
+    else {    // Is a color
+        if (H < 14)
+            color = "red";
+        else if (H < 25)
+            color = "orange";
+        else if (H < 34)
+            color = "yellow";
+        else if (H < 73)
+            color = "green";
+        else if (H < 102)
+            color = "cyan";
+        else if (H < 127)
+            color = "blue";
+        else if (H < 149)
+            color = "purple";
+        else    // full circle
+            color = "red";    // back to Red
+    }
+    return color;
+}
+
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image)	{
 	printf ("getShirtColor() \n");
     cv::Rect roi = getUpperBodyRoi(person, image);
@@ -717,7 +751,19 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 //    if( BLUE <= mean_color[0]  && mean_color[0] < PURPLE )
 //        return "purple";
 
-     std::vector<std::pair<std::string, cv::Scalar>> mean_colors; // [0] b, [1] g, [2] r
+     std::map<std::string, int> bin_colors;
+     bin_colors["white"] = 0;
+     bin_colors["black"] = 0;
+     bin_colors["grey"] = 0;
+     bin_colors["red"] = 0;
+     bin_colors["orange"] = 0;
+     bin_colors["yellow"] = 0;
+     bin_colors["green"] = 0;
+     bin_colors["cyan"] = 0;
+     bin_colors["blue"] = 0;
+     bin_colors["purple"] = 0;
+
+//     std::vector<std::pair<std::string, cv::Scalar>> mean_colors; // [0] b, [1] g, [2] r
      cv::Mat mask;
 
      int GRID_SIZE = floor(crop_img.cols/10);
@@ -727,63 +773,74 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
              mask = cv::Mat::zeros(crop_img.size(), CV_8UC1);
              cv::Rect grid_rect( x, y, GRID_SIZE, GRID_SIZE );
              cv::rectangle( mask, grid_rect, 255, CV_FILLED );
-             mean_colors.push_back( std::make_pair( "", cv::mean( crop_img,mask ) ) );
+             cv::Mat hsv_cell;
+             crop_img.copyTo(hsv_cell,mask);
+             cv::cvtColor(hsv_cell, hsv_cell, CV_BGR2HSV);\
+             bin_colors[getPixelColorType(cv::mean(hsv_cell))]++;
          }
      }
 
-    std::vector<std::pair<std::string, cv::Scalar>> color_prototypes_bgr;
+//    std::vector<std::pair<std::string, cv::Scalar>> color_prototypes_bgr;
 
-    color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(220,220,220)));
-    color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(255,255,255)));
-    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(40,40,40)));
-    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(0,0,0)));
-    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(100,100,100)));
-    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
-    color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
-    color_prototypes_bgr.push_back(std::make_pair("orange",cv::Scalar(0,165,255)));
-    color_prototypes_bgr.push_back(std::make_pair("yellow",cv::Scalar(0,255,255)));
-    color_prototypes_bgr.push_back(std::make_pair("geen",cv::Scalar(0,255,0)));
-    color_prototypes_bgr.push_back(std::make_pair("cyan",cv::Scalar(255,255,0)));
-    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(255,0,0)));
-    color_prototypes_bgr.push_back(std::make_pair("purple",cv::Scalar(128,0,128)));
+//    color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(220,220,220)));
+//    color_prototypes_bgr.push_back(std::make_pair("white",cv::Scalar(255,255,255)));
+//    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(40,40,40)));
+//    color_prototypes_bgr.push_back(std::make_pair("black",cv::Scalar(0,0,0)));
+//    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(100,100,100)));
+//    color_prototypes_bgr.push_back(std::make_pair("grey",cv::Scalar(155,155,155)));
+//    color_prototypes_bgr.push_back(std::make_pair("red",cv::Scalar(0,0,255)));
+//    color_prototypes_bgr.push_back(std::make_pair("orange",cv::Scalar(0,165,255)));
+//    color_prototypes_bgr.push_back(std::make_pair("yellow",cv::Scalar(0,255,255)));
+//    color_prototypes_bgr.push_back(std::make_pair("geen",cv::Scalar(0,255,0)));
+//    color_prototypes_bgr.push_back(std::make_pair("cyan",cv::Scalar(255,255,0)));
+//    color_prototypes_bgr.push_back(std::make_pair("blue",cv::Scalar(255,0,0)));
+//    color_prototypes_bgr.push_back(std::make_pair("purple",cv::Scalar(128,0,128)));
 
-    std::vector<std::pair<std::string, int>> bin_color_count;
-    bin_color_count.push_back(std::make_pair("white", 0));
-    bin_color_count.push_back(std::make_pair("black", 0));
-    bin_color_count.push_back(std::make_pair("grey", 0));
-    bin_color_count.push_back(std::make_pair("red", 0));
-    bin_color_count.push_back(std::make_pair("orange", 0));
-    bin_color_count.push_back(std::make_pair("yellow", 0));
-    bin_color_count.push_back(std::make_pair("green", 0));
-    bin_color_count.push_back(std::make_pair("cyan", 0));
-    bin_color_count.push_back(std::make_pair("blue", 0));
-    bin_color_count.push_back(std::make_pair("purple", 0));
+//    std::vector<std::pair<std::string, int>> bin_color_count;
+//    bin_color_count.push_back(std::make_pair("white", 0));
+//    bin_color_count.push_back(std::make_pair("black", 0));
+//    bin_color_count.push_back(std::make_pair("grey", 0));
+//    bin_color_count.push_back(std::make_pair("red", 0));
+//    bin_color_count.push_back(std::make_pair("orange", 0));
+//    bin_color_count.push_back(std::make_pair("yellow", 0));
+//    bin_color_count.push_back(std::make_pair("green", 0));
+//    bin_color_count.push_back(std::make_pair("cyan", 0));
+//    bin_color_count.push_back(std::make_pair("blue", 0));
+//    bin_color_count.push_back(std::make_pair("purple", 0));
 
-    double result_val = 9999;
-    for ( size_t k=0; k<mean_colors.size(); k++ ) {
+//    double result_val = 9999;
+//    for ( size_t k=0; k<mean_colors.size(); k++ ) {
 
-        for ( size_t i=0; i<color_prototypes_bgr.size(); i++ ) {
-            if ( result_val > cv::norm(mean_colors.at(k).second,color_prototypes_bgr.at(i).second,cv::NORM_L2) ) {
-                result_val = cv::norm(mean_colors.at(k).second,color_prototypes_bgr.at(i).second,cv::NORM_L2 );
-                mean_colors.at(k).first = color_prototypes_bgr.at(i).first;
-            }
-        }
+//        for ( size_t i=0; i<color_prototypes_bgr.size(); i++ ) {
+//            if ( result_val > cv::norm(mean_colors.at(k).second,color_prototypes_bgr.at(i).second,cv::NORM_L2) ) {
+//                result_val = cv::norm(mean_colors.at(k).second,color_prototypes_bgr.at(i).second,cv::NORM_L2 );
+//                mean_colors.at(k).first = color_prototypes_bgr.at(i).first;
+//            }
+//        }
 
-        for(size_t j = 0; j < bin_color_count.size(); j++){
-            if(bin_color_count.at(j).first == mean_colors.at(k).first)
-                bin_color_count.at(j).second++;
-        }
-        result_val = 9999;
-    }
+//        for(size_t j = 0; j < bin_color_count.size(); j++){
+//            if(bin_color_count.at(j).first == mean_colors.at(k).first)
+//                bin_color_count.at(j).second++;
+//        }
+//        result_val = 9999;
+//    }
 
 
     std::string result_color = "no color";
-    int max = 0;
-    for(size_t i = 0; i < bin_color_count.size(); i++){
-        std::cout << bin_color_count.at(i).first << " bins: " << bin_color_count.at(i).second << std::endl;
-        if(bin_color_count.at(i).second > max)
-            result_color = bin_color_count.at(i).first;
+    int res_val = 0;
+    for (std::map<std::string,int>::iterator it = bin_colors.begin(); it != bin_colors.end(); ++it) {
+        std::cout << it->first << " bins: " << it->second << std::endl;
+        if(res_val < it->second) {
+            result_color = it->first;
+        }
     }
+
+//    int max = 0;
+//    for(size_t i = 0; i < bin_color_count.size(); i++){
+//        std::cout << bin_color_count.at(i).first << " bins: " << bin_color_count.at(i).second << std::endl;
+//        if(bin_color_count.at(i).second > max)
+//            result_color = bin_color_count.at(i).first;
+//    }
 
 //    std::cout << "SHIRT COLOR BGR VALUE: " << mean_colors.at(0)[0] << ":" << mean_colors.at(0)[1] << ":" << mean_colors.at(0)[2] << std::endl;
 //    std::cout << "SHIRT COLOR DETECTION RESULT: " << result_color << std::endl;
