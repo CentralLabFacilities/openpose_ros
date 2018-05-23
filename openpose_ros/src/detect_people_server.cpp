@@ -827,11 +827,12 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 
 
     std::string result_color = "no color";
-    int res_val = 0;
+    int max_bin_count = 0;
     for (std::map<std::string,int>::iterator it = bin_colors.begin(); it != bin_colors.end(); ++it) {
         std::cout << it->first << " bins: " << it->second << std::endl;
-        if(res_val < it->second) {
+        if(max_bin_count < it->second) {
             result_color = it->first;
+            max_bin_count = it->second;
         }
     }
 
