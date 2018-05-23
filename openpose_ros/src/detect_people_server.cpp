@@ -668,9 +668,6 @@ std::string getPixelColorType(cv::Scalar hsv_val)
     double S = hsv_val[1];
     double V = hsv_val[2];
 
-
-    std::cout << "HSV: " << hsv_val[0] << " " << hsv_val[1] << " " << hsv_val[2] << std::endl;
-
     std::string color;
     if (V < 75)
         color = "black";
