@@ -116,6 +116,10 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
         res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
 
+    } else {
+
+        ROS_ERROR("Service Call failed! Unable to get Images!");
+
     }
 
     return true;
