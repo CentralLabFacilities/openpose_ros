@@ -326,19 +326,20 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 // printf("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
                 getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, color_image);
-
-                cv::Rect roi;
-                roi.x = crop_x;
-                roi.y = crop_y;
-                roi.width = crop_width;
-                roi.height = crop_height;
-                cv::Mat crop = color_image(roi);
-                if(visualize){
-                    cv::imshow("CLF OpenPose | GA", crop);
-                    cv::waitKey(3);
+                if(crop_x >= 0) {
+                    cv::Rect roi;
+                    roi.x = crop_x;
+                    roi.y = crop_y;
+                    roi.width = crop_width;
+                    roi.height = crop_height;
+                    cv::Mat crop = color_image(roi);
+                    if(visualize){
+                        cv::imshow("CLF OpenPose | GA", crop);
+                        cv::waitKey(3);
+                    }
+                    sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+                    srv.request.objects.push_back(*inputImage_msg);
                 }
-                sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
-                srv.request.objects.push_back(*inputImage_msg);
             } catch (cv::Exception e) {
                     std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
             }
@@ -404,35 +405,50 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         int crop_x, crop_y, crop_width, crop_height;
         ROS_DEBUG("Calling get head bounds");
         getHeadBounds(person_list.at(i),crop_x, crop_y, crop_width, crop_height, color_image);
-        cv::Rect roiHead;
-        roiHead.x = crop_x;
-        roiHead.y = crop_y;
-        roiHead.width = crop_width;
-        roiHead.height = crop_height;
+        if(crop_x >= 0) {
+            cv::Rect roiHead;
+            roiHead.x = crop_x;
+            roiHead.y = crop_y;
+            roiHead.width = crop_width;
+            roiHead.height = crop_height;
 
-        ROS_DEBUG("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
+            ROS_DEBUG("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
 
-        cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
-                                 161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+            cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
+                                     161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
-        cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
+            cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
 
-        geometry_msgs::PoseStamped camera_pose_head;
-        geometry_msgs::PoseStamped base_link_pose_head;
-        base_link_pose_head.header.frame_id = "base_link";
-        camera_pose_head.header.frame_id = frame_id;
-        camera_pose_head.header.stamp = ros::Time::now();
-        camera_pose_head.pose.position.x = pt_head(0);
-        camera_pose_head.pose.position.y = pt_head(1);
-        camera_pose_head.pose.position.z = pt_head(2);
-        camera_pose_head.pose.orientation.x = 0.0;
-        camera_pose_head.pose.orientation.y = 0.0;
-        camera_pose_head.pose.orientation.z = 0.0;
-        camera_pose_head.pose.orientation.w = 1.0;
+            geometry_msgs::PoseStamped camera_pose_head;
+            geometry_msgs::PoseStamped base_link_pose_head;
+            base_link_pose_head.header.frame_id = "base_link";
+            camera_pose_head.header.frame_id = frame_id;
+            camera_pose_head.header.stamp = ros::Time::now();
+            camera_pose_head.pose.position.x = pt_head(0);
+            camera_pose_head.pose.position.y = pt_head(1);
+            camera_pose_head.pose.position.z = pt_head(2);
+            camera_pose_head.pose.orientation.x = 0.0;
+            camera_pose_head.pose.orientation.y = 0.0;
+            camera_pose_head.pose.orientation.z = 0.0;
+            camera_pose_head.pose.orientation.w = 1.0;
+        } else {
+            geometry_msgs::PoseStamped camera_pose_head;
+            geometry_msgs::PoseStamped base_link_pose_head;
+            base_link_pose_head.header.frame_id = "base_link";
+            camera_pose_head.header.frame_id = frame_id;
+            camera_pose_head.header.stamp = ros::Time::now();
+            camera_pose_head.pose.position.x = NAN;
+            camera_pose_head.pose.position.y = NAN;
+            camera_pose_head.pose.position.z = NAN;
+            camera_pose_head.pose.orientation.x = 0.0;
+            camera_pose_head.pose.orientation.y = 0.0;
+            camera_pose_head.pose.orientation.z = 0.0;
+            camera_pose_head.pose.orientation.w = 1.0;
+        }
 
         try{
             ROS_DEBUG("Transforming received position into BASELINK coordinate system.");
-            listener->waitForTransform(camera_pose.header.frame_id, base_link_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(3.0));
+            listener->waitForTransform(camera_pose.header.frame_id, base_link_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(20.0));
             listener->transformPose(base_link_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, base_link_pose);
             listener->transformPose(base_link_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, base_link_pose_head);
         } catch(tf::TransformException ex) {
@@ -763,7 +779,7 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
     int v = floor(vf / amount);
 
     if (amount <= 1)    {
-        x = y = width = height = 1;
+        x = y = width = height = -1;
         return;
     }
 
