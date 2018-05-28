@@ -36,7 +36,6 @@
 
 #define PI 3.14159265
 
-
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
 
@@ -128,7 +127,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 // This function luckily already existed in https://github.com/introlab/find-object/blob/master/src/ros/FindObjectROS.cpp (THANKS!)
 cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy, float fx, float fy) {
 
-    ROS_INFO("getDepth called x: %d y: %d", x, y);
+    ROS_DEBUG("getDepth called x: %d y: %d", x, y);
 
     if(!(x >=0 && x<depthImage.cols && y >=0 && y<depthImage.rows))
     {
@@ -228,7 +227,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         pt.val[2] = depth*unit_scaling;
     }
 
-    ROS_INFO("DEPTH %f %f %f", pt(0), pt(1), pt(2));
+    ROS_DEBUG("DEPTH %f %f %f", pt(0), pt(1), pt(2));
 
     return pt;
 }
@@ -240,8 +239,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     op::Array<float> net_input_array;
     std::vector<float> scale_ratios;
 
-    ROS_INFO("Converting cv image to openpose array.");
-    ROS_INFO("Im cols %d, im rows %d", color_image.cols, color_image.rows);
+    ROS_DEBUG("Converting cv image to openpose array.");
+    ROS_DEBUG("Im cols %d, im rows %d", color_image.cols, color_image.rows);
     const op::Point<int> image_size{color_image.cols, color_image.rows};
 
     std::vector<double> scale_input_to_net_inputs;
@@ -254,14 +253,14 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     // Step 3 - Format input image to OpenPose input and output formats
     const auto netInputArray = cvMatToOpInput->createArray(color_image, scale_input_to_net_inputs, net_input_sizes);
 
-    ROS_INFO("Detect poses using forward pass.");
+    ROS_DEBUG("Detect poses using forward pass.");
     poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
     const auto pose_key_points = poseExtractorCaffe->getPoseKeypoints();
 
     gender_and_age_msgs::GenderAndAgeService srv;
     std::vector<std::string> shirt_list;
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
-    ROS_INFO("Extracted %d people.", pose_key_points.getSize(0));
+    ROS_DEBUG("Extracted %d people.", pose_key_points.getSize(0));
     if(pose_key_points.getSize(0) == 0) {
         return res;
     }
@@ -273,7 +272,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         pose_renderer->renderPose(output_array,pose_key_points,scale_input_to_output);
         auto output_image = opOutputToCvMat.formatToCvMat(output_array);
 
-        cv::imshow("Detections", output_image);
+        cv::imshow("CLF OpenPose", output_image);
         cv::waitKey(3);
     }
 
@@ -289,12 +288,12 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             bodypart.u = u;
             bodypart.v = v;
 
-            ROS_INFO("u: %d, v: %d", u, v);
+            ROS_DEBUG("u: %d, v: %d", u, v);
 
             std::string bodypart_name = coco_body_parts[j];
 
-            ROS_INFO("BodyPartName: %s", bodypart_name.c_str());
-            ROS_INFO("Confidence: %f", bodypart.confidence);
+            ROS_DEBUG("BodyPartName: %s", bodypart_name.c_str());
+            ROS_DEBUG("Confidence: %f", bodypart.confidence);
 
             if (bodypart_name == "Nose") person.Nose = bodypart;
             else if (bodypart_name == "Neck") person.Neck = bodypart;
@@ -324,7 +323,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         if(gender_age) {
             try {
-                printf ("Gender and age is ON");
+                // printf("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
                 getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, color_image);
 
@@ -335,7 +334,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 roi.height = crop_height;
                 cv::Mat crop = color_image(roi);
                 if(visualize){
-                    cv::imshow("CLF OpenPose | gender and age input", crop);
+                    cv::imshow("CLF OpenPose | GA", crop);
                     cv::waitKey(3);
                 }
                 sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
@@ -346,7 +345,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         }
         if(shirt_color) {
-                printf("Shirt detection is ON \n");
+                // printf("Shirt detection is ON \n");
                 try{
                         shirt_list.push_back(getShirtColor(person, color_image));
                 } catch (cv::Exception e) {
@@ -359,8 +358,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
     if(gender_age) {
         face_client_ptr.get()->call(srv);
-        ROS_INFO("gasize: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
-        ROS_INFO("personsize: %u",(int)person_list.size());
+        ROS_INFO(">> Gender Age: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
+        ROS_INFO(">> Person Size: %u",(int)person_list.size());
         if((int)srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
             for (size_t i = 0; i < srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
                 std::cout << "GENDER HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
@@ -373,7 +372,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     if(shirt_color) {
         for (int i = 0; i < shirt_list.size(); i++)	{
                 std::string shirtcolor = shirt_list[i];
-                ROS_INFO ("t-shirt color person %d: %s, ", i, shirtcolor.c_str());
+                ROS_INFO (">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
                 printf("\n");
 
                 person_list.at(i).shirtcolor = shirtcolor;
@@ -383,7 +382,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     for( int i = 0; i < person_list.size(); i++ ) {
 
         openpose_ros_msgs::PersonAttributesWithPose attributes = getPostureAndGesture( person_list.at(i) );
-        //HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
+        // HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
         cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
         cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (640/320), (roi.y + roi.height/2) / (480/240),
@@ -405,7 +404,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         camera_pose.pose.orientation.w = 1.0;
 
         int crop_x, crop_y, crop_width, crop_height;
-        ROS_INFO("Calling get head bounds");
+        ROS_DEBUG("Calling get head bounds");
         getHeadBounds(person_list.at(i),crop_x, crop_y, crop_width, crop_height, color_image);
         cv::Rect roiHead;
         roiHead.x = crop_x;
@@ -413,7 +412,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         roiHead.width = crop_width;
         roiHead.height = crop_height;
 
-        ROS_INFO("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
+        ROS_DEBUG("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
 
         cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
                                  161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
@@ -706,7 +705,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         roi.height = 10;
 
     cv::Mat crop_img = image;
-	ROS_INFO("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
+	ROS_DEBUG("#2: x: %d, y: %d, width: %d, height: %d.\n", roi.x, roi.y, roi.width, roi.height);
     try {
         crop_img = image(roi);
     } catch (cv::Exception e) {
@@ -715,13 +714,12 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     }
 
     if(visualize) {
-        cv::imshow("CLF OpenPose | SHIRT PICTURE", crop_img);
+        cv::imshow("CLF OpenPose | SHIRT", crop_img);
         cv::waitKey(3);
     }
 
     cv::Mat hsv_crop_img;
     cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
-
 
      std::map<std::string, int> bin_colors;
      bin_colors["white"] = 0;
@@ -852,23 +850,20 @@ int main(int argc, char **argv) {
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
 
     // ROS Service for age and gender detection
-    if(ros::service::exists("clf_gender_age_classify_array",false)) {
-        ROS_INFO("gender and age classify service exists.");
+    if(ros::service::exists("clf_gender_age_classify_array", false)) {
+        ROS_INFO(">> Gender and age classify service exists.");
         gender_age = true;
         face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
     }
 
-    // one shot picture service
-    if(ros::service::exists("naoqi_driver/get_images",false)) {
-        ROS_INFO("color image service exists.");
+    // One shot picture service
+    if(ros::service::exists("naoqi_driver/get_images", false)) {
+        ROS_INFO(">> Color image service exists.");
         depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("naoqi_driver/get_images")));
     }
 
     initializeOP();
-
-
-    ROS_INFO("Init done. Can start detecting people.");
-
+    ROS_INFO(">> Init done. Ready.");
     ros::spin();
 
     return 0;
