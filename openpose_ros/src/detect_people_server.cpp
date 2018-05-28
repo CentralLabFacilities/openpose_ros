@@ -408,7 +408,11 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         geometry_msgs::PoseStamped camera_pose_head;
         geometry_msgs::PoseStamped base_link_pose_head;
+        base_link_pose_head.header.frame_id = "base_link";
+        bool gotHead = false;
+
         if(crop_x >= 0) {
+            gotHead = true;
             cv::Rect roiHead;
             roiHead.x = crop_x;
             roiHead.y = crop_y;
@@ -422,7 +426,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
             cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
 
-            base_link_pose_head.header.frame_id = "base_link";
+
             camera_pose_head.header.frame_id = frame_id;
             camera_pose_head.header.stamp = ros::Time::now();
             camera_pose_head.pose.position.x = pt_head(0);
@@ -433,23 +437,23 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             camera_pose_head.pose.orientation.z = 0.0;
             camera_pose_head.pose.orientation.w = 1.0;
         } else {
-            base_link_pose_head.header.frame_id = "base_link";
-            camera_pose_head.header.frame_id = frame_id;
-            camera_pose_head.header.stamp = ros::Time::now();
-            camera_pose_head.pose.position.x = NAN;
-            camera_pose_head.pose.position.y = NAN;
-            camera_pose_head.pose.position.z = NAN;
-            camera_pose_head.pose.orientation.x = 0.0;
-            camera_pose_head.pose.orientation.y = 0.0;
-            camera_pose_head.pose.orientation.z = 0.0;
-            camera_pose_head.pose.orientation.w = 1.0;
+            base_link_pose_head.header.stamp = ros::Time::now();
+            base_link_pose_head.pose.position.x = NAN;
+            base_link_pose_head.pose.position.y = NAN;
+            base_link_pose_head.pose.position.z = NAN;
+            base_link_pose_head.pose.orientation.x = 0.0;
+            base_link_pose_head.pose.orientation.y = 0.0;
+            base_link_pose_head.pose.orientation.z = 0.0;
+            base_link_pose_head.pose.orientation.w = 1.0;
         }
 
         try{
             ROS_DEBUG("Transforming received position into BASELINK coordinate system.");
             listener->waitForTransform(camera_pose.header.frame_id, base_link_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(20.0));
             listener->transformPose(base_link_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, base_link_pose);
-            listener->transformPose(base_link_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, base_link_pose_head);
+            if(gotHead) {
+                listener->transformPose(base_link_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, base_link_pose_head);
+            }
         } catch(tf::TransformException ex) {
             ROS_WARN("Failed transform: %s", ex.what());
             base_link_pose = camera_pose;
