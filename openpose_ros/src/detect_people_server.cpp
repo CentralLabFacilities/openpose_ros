@@ -405,6 +405,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         int crop_x, crop_y, crop_width, crop_height;
         ROS_DEBUG("Calling get head bounds");
         getHeadBounds(person_list.at(i),crop_x, crop_y, crop_width, crop_height, color_image);
+
+        geometry_msgs::PoseStamped camera_pose_head;
+        geometry_msgs::PoseStamped base_link_pose_head;
         if(crop_x >= 0) {
             cv::Rect roiHead;
             roiHead.x = crop_x;
@@ -419,8 +422,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
             cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
 
-            geometry_msgs::PoseStamped camera_pose_head;
-            geometry_msgs::PoseStamped base_link_pose_head;
             base_link_pose_head.header.frame_id = "base_link";
             camera_pose_head.header.frame_id = frame_id;
             camera_pose_head.header.stamp = ros::Time::now();
@@ -432,8 +433,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             camera_pose_head.pose.orientation.z = 0.0;
             camera_pose_head.pose.orientation.w = 1.0;
         } else {
-            geometry_msgs::PoseStamped camera_pose_head;
-            geometry_msgs::PoseStamped base_link_pose_head;
             base_link_pose_head.header.frame_id = "base_link";
             camera_pose_head.header.frame_id = frame_id;
             camera_pose_head.header.stamp = ros::Time::now();
