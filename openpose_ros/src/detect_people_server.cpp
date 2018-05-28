@@ -39,6 +39,8 @@
 enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
 enum posture{SITTING = 1, STANDING = 2, LYING = 3};
 
+const char* gesture_name[] = { "POINTING_LEFT", "POINTING_RIGHT", "RAISING_LEFT_ARM", "RAISING_RIGHT_ARM", "WAVING", "NEUTRAL" } ;
+const char* posture_name[] = { "SITTING", "STANDING", "LYING" } ;
 int gpu_id;
 std::string models_folder;
 std::shared_ptr <op::PoseExtractor> pose_extractor;
@@ -496,10 +498,14 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     double Vertical = 90;
     double Horizontal = 180;
 
+
+    double LShoulderLWristAngle = calcAngle(LShoulder,LWrist);
     double LShoulderLHipAngle = calcAngle(LShoulder,LHip);
     double LKneeLHipDist = sqrt(pow(LKnee.y - LHip.y , 2));
     double LAnkleLHipDist = sqrt(pow(LAnkle.y - LHip.y , 2));
 
+
+    double RShoulderRWristAngle = calcAngle(RShoulder, RWrist);
     double RShoulderRHipAngle = calcAngle(RShoulder, RHip);
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
@@ -525,20 +531,22 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
         attributes.posture = STANDING;
     }
 
-
-    if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
-        (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0)) {
-            attributes.gesture = WAVING;
-    }
-     else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
-        attributes.gesture = RAISING_LEFT_ARM;
+    if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
+            attributes.gesture = RAISING_LEFT_ARM;
     } else if(person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
-        attributes.gesture = RAISING_RIGHT_ARM;
+            attributes.gesture = RAISING_RIGHT_ARM;
+    } else if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
+                (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0)) {
+        attributes.gesture = WAVING;
+    } else if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
+        attributes.gesture = POINTING_RIGHT;
+    } else if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
+        attributes.gesture = POINTING_LEFT;
     } else {
         attributes.gesture = NEUTRAL;
     }
-    std::cout << "Gesture: \t" << attributes.gesture << std::endl;
-    std::cout << "posture: \t" << attributes.posture << std::endl;
+    std::cout << "Gesture: \t" << gesture_name[ attributes.gesture - 1 ] << std::endl;
+    std::cout << "posture: \t" << posture_name[ attributes.posture - 1 ] << std::endl;
     attributesWithPose.attributes = attributes;
     return attributesWithPose;
 }
