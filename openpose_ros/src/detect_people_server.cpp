@@ -97,7 +97,7 @@ void initializeOP() {
 
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
-    ROS_INFO("Crowd Attribues callback!");
+    ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
     pepper_clf_msgs::DepthAndColorImage srv;
     cv_bridge::CvImagePtr cv_bridge_color;
     cv_bridge::CvImagePtr cv_bridge_depth;
@@ -358,8 +358,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
     if(gender_age) {
         face_client_ptr.get()->call(srv);
-        ROS_INFO(">> Gender Age: %u",(int)srv.response.gender_and_age_response.gender_and_age_list.size());
-        ROS_INFO(">> Person Size: %u",(int)person_list.size());
+        ROS_INFO(">> Gender Age: %u", (int)srv.response.gender_and_age_response.gender_and_age_list.size());
+        ROS_INFO(">> Person Size: %u", (int)person_list.size());
         if((int)srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
             for (size_t i = 0; i < srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
                 std::cout << "GENDER HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
@@ -373,8 +373,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         for (int i = 0; i < shirt_list.size(); i++)	{
                 std::string shirtcolor = shirt_list[i];
                 ROS_INFO (">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
-                printf("\n");
-
                 person_list.at(i).shirtcolor = shirtcolor;
         }
     }
