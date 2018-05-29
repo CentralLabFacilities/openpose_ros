@@ -1,3 +1,4 @@
+string name
 gender_and_age_msgs/GenderProbability gender_hyp
 gender_and_age_msgs/AgeProbability age_hyp
 string shirtcolor
