@@ -45,8 +45,9 @@
   <build_depend>openpose_ros_msgs</build_depend>
   <build_depend>bayes_people_tracker_msgs</build_depend>
   <build_depend>pepper_clf_msgs</build_depend>
+  <build_depend>clf_perception_vision_msgs</build_depend>
 
-<!--  <run_depend>clf_perception_vision_msgs</run_depend>-->
+  <run_depend>clf_perception_vision_msgs</run_depend>
   <run_depend>bayes_people_tracker_msgs</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>cv_bridge</run_depend>

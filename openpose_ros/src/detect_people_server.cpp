@@ -28,6 +28,8 @@
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 #include <pepper_clf_msgs/DepthAndColorImage.h>
 
+#include <clf_perception_vision_msgs/DoIKnowThatPersonImage.h>
+
 #include <tf/transform_listener.h>
 
 #include <ros/package.h>
@@ -72,9 +74,12 @@ std::mutex depth_image_mutex;
 bool visualize;
 bool visualize_uuid;
 bool gender_age = false;
+bool face_id = false;
+bool depth_srv = false;
 bool shirt_color = true;
 double SITTINGPERCENT = 0.4;
-boost::shared_ptr<ros::ServiceClient> face_client_ptr;
+boost::shared_ptr<ros::ServiceClient> gender_age_ptr;
+boost::shared_ptr<ros::ServiceClient> face_id_ptr;
 boost::shared_ptr<ros::ServiceClient> depth_color_client_ptr;
 openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
 std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string);
@@ -259,7 +264,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
     const auto pose_key_points = poseExtractorCaffe->getPoseKeypoints();
 
-    gender_and_age_msgs::GenderAndAgeService srv;
+    gender_and_age_msgs::GenderAndAgeService gender_age_srv;
+    clf_perception_vision_msgs::DoIKnowThatPersonImage face_id_srv;
     std::vector<std::string> shirt_list;
     std::vector<openpose_ros_msgs::PersonDetection> person_list;
     ROS_DEBUG("Extracted %d people.", pose_key_points.getSize(0));
@@ -340,7 +346,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                         cv::waitKey(3);
                     }
                     sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
-                    srv.request.objects.push_back(*inputImage_msg);
+                    gender_age_srv.request.objects.push_back(*inputImage_msg);
                 }
             } catch (cv::Exception e) {
                     std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
@@ -360,15 +366,15 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     }
 
     if(gender_age) {
-        face_client_ptr.get()->call(srv);
-        ROS_INFO(">> Gender Age: %u", (int)srv.response.gender_and_age_response.gender_and_age_list.size());
+        gender_age_ptr.get()->call(gender_age_srv);
+        ROS_INFO(">> Gender Age: %u", (int)gender_age_srv.response.gender_and_age_response.gender_and_age_list.size());
         ROS_INFO(">> Person Size: %u", (int)person_list.size());
-        if((int)srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
-            for (size_t i = 0; i < srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
-                std::cout << "GENDER HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
-                std::cout << "AGE HYPOTHESES:\t" << srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability << std::endl;
-                    person_list.at(i).gender_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
-                    person_list.at(i).age_hyp = srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+        if((int)gender_age_srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
+            for (size_t i = 0; i < gender_age_srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
+                std::cout << "GENDER HYPOTHESES:\t" << gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
+                std::cout << "AGE HYPOTHESES:\t" << gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability << std::endl;
+                    person_list.at(i).gender_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+                    person_list.at(i).age_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
             }
         }
     }
@@ -380,7 +386,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         }
     }
 
-    for( int i = 0; i < person_list.size(); i++ ) {
+    for( size_t i = 0; i < person_list.size(); i++ ) {
 
         openpose_ros_msgs::PersonAttributesWithPose attributes = getPostureAndGesture( person_list.at(i) );
         // HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
@@ -460,6 +466,31 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             ROS_WARN("Failed transform: %s", ex.what());
             base_link_pose = camera_pose;
             base_link_pose_head = camera_pose_head;
+        }
+
+        if(face_id) {
+            try {
+                if(crop_x >= 0) {
+                    cv::Rect roi;
+                    roi.x = crop_x;
+                    roi.y = crop_y;
+                    roi.width = crop_width;
+                    roi.height = crop_height;
+                    cv::Mat crop = color_image(roi);
+                    sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
+                    face_id_srv.request.roi = *inputImage_msg;
+                }
+            } catch (cv::Exception e) {
+                    std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
+            }
+
+            face_id_ptr.get()->call(face_id_srv);
+
+            if(face_id_srv.response.known) {
+                attributes.attributes.name = face_id_srv.response.name;
+            } else {
+                attributes.attributes.name = "unknown";
+            }
         }
 
         attributes.pose_stamped = base_link_pose;
@@ -878,14 +909,26 @@ int main(int argc, char **argv) {
     if(ros::service::exists("clf_gender_age_classify_array", false)) {
         ROS_INFO(">> Gender and age classify service exists.");
         gender_age = true;
-        face_client_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
+        gender_age_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
     }
 
     // One shot picture service
     if(ros::service::exists("naoqi_driver/get_images", false)) {
+        depth_srv = true;
         ROS_INFO(">> Color image service exists.");
         depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("naoqi_driver/get_images")));
     }
+
+    if(ros::service::exists("clf_face_identification_know_image", false)) {
+        face_id = true;
+        ROS_INFO(">> face identification service exists.");
+        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("clf_face_identification_know_image")));
+    }
+
+
+
+
+
 
     initializeOP();
     ROS_INFO(">> Init done. Ready.");
