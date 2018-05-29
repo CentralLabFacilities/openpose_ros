@@ -15,6 +15,7 @@ add_message_files(
    BodyPartDetection.msg
    PersonDetection.msg
    PersonAttributes.msg
+   PersonAttributesWithPose.msg
 )
 
 add_service_files(
@@ -22,6 +23,7 @@ add_service_files(
    DetectPeople.srv
    GetPersonAttributes.srv
    GetCrowdAttributes.srv
+   GetCrowdAttributesWithPose.srv
 )
 
 generate_messages(
