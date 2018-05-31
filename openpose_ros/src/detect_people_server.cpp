@@ -926,10 +926,6 @@ int main(int argc, char **argv) {
     }
 
 
-
-
-
-
     initializeOP();
     ROS_INFO(">> Init done. Ready.");
     ros::spin();
