@@ -27,7 +27,6 @@
 #include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 #include <pepper_clf_msgs/DepthAndColorImage.h>
-
 #include <clf_perception_vision_msgs/DoIKnowThatPersonImage.h>
 
 #include <tf/transform_listener.h>
@@ -919,10 +918,11 @@ int main(int argc, char **argv) {
         depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("naoqi_driver/get_images")));
     }
 
+    // Learn face
     if(ros::service::exists("clf_face_identification_know_image", false)) {
         face_id = true;
         ROS_INFO(">> face identification service exists.");
-        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("clf_face_identification_know_image")));
+        face_id_ptr.reset(new ros::ServiceClient(n.serviceClient<clf_perception_vision_msgs::DoIKnowThatPersonImage>("clf_face_identification_know_image")));
     }
 
 
