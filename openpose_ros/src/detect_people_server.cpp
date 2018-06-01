@@ -384,6 +384,10 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 std::cout << "AGE HYPOTHESES:\t" << gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability << std::endl;
                     person_list.at(i).gender_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
                     person_list.at(i).age_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+                    cv::putText(output_image, string("G: ") + std::to_string(person_list.at(i).gender_hyp), cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
+                                cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
+                    cv::putText(output_image, string("A: ") + std::to_string(person_list.at(i).age_hyp), cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
+                                cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
             }
         }
     }
@@ -392,6 +396,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 std::string shirtcolor = shirt_list[i];
                 ROS_DEBUG(">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
                 person_list.at(i).shirtcolor = shirtcolor;
+                cv::putText(output_image, string("S: ") + shirtcolor, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+40),
+                            cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
         }
     }
 
@@ -402,9 +408,10 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         if(visualize) {
             attributes.attributes.posture;
             person_list.at(i).Nose;
-            cv::putText(output_image, gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
+            // Draw person gesture and posture
+            cv::putText(output_image, string("G: ") + gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+60),
                          cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
-            cv::putText(output_image, posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
+            cv::putText(output_image, string("P: ") + posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+80),
                          cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
         }
 
@@ -508,8 +515,14 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
             if(face_id_srv.response.known) {
                 attributes.attributes.name = face_id_srv.response.name;
+                // Draw person gesture and posture
+                cv::putText(output_image, string("N: ") + attributes.attributes.name, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+100),
+                            cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
+
             } else {
                 attributes.attributes.name = "unknown";
+                cv::putText(output_image, string("N: ") + attributes.attributes.name, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+120),
+                            cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
             }
         }
 
