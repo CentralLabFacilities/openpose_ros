@@ -121,6 +121,18 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
         res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
 
+        for( size_t i = 0 ; i < res.attributes.size() ; i++) {
+
+            std::cout << "PERSON " << i << ": " << std::endl;
+            std::cout << "\t " << "Name: " << res.attributes.at(i).attributes.name << std::endl;
+            std::cout << "\t " << "Age: " << res.attributes.at(i).attributes.age_hyp << std::endl;
+            std::cout << "\t " << "Gender: " << res.attributes.at(i).attributes.gender_hyp << std::endl;
+            std::cout << "\t " << "Gesture: " << gesture_name[ res.attributes.at(i).attributes.gesture - 1 ] << std::endl;
+            std::cout << "\t " << "Posture: " << posture_name[ res.attributes.at(i).attributes.posture - 1 ] << std::endl;
+            std::cout << "\t " << "Shirtcolor: " << res.attributes.at(i).attributes.shirtcolor << std::endl;
+
+        }
+
     } else {
 
         ROS_ERROR("Service Call failed! Unable to get Images!");
@@ -540,15 +552,15 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
     double RAnkleRHipDist = sqrt(pow(RAnkle.y - RHip.y , 2));
 
-    std::cout << "LKnee, RKnee: " << LKnee.y << " : " << RKnee.y << std::endl;
-    std::cout << "LAnkle, RAnkle: " << LAnkle.y << " : " << RAnkle.y << std::endl;
-    std::cout << "LHip, RHip: " << LHip.y << " : " << RHip.y << std::endl;
-    std::cout << "LKneeLHipDist: " << LKneeLHipDist << std::endl;
-    std::cout << "LAnkleLHipDist * SittingPercent: " << LAnkleLHipDist * SITTINGPERCENT << std::endl;
-    std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
-    std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
+//    std::cout << "LKnee, RKnee: " << LKnee.y << " : " << RKnee.y << std::endl;
+//    std::cout << "LAnkle, RAnkle: " << LAnkle.y << " : " << RAnkle.y << std::endl;
+//    std::cout << "LHip, RHip: " << LHip.y << " : " << RHip.y << std::endl;
+//    std::cout << "LKneeLHipDist: " << LKneeLHipDist << std::endl;
+//    std::cout << "LAnkleLHipDist * SittingPercent: " << LAnkleLHipDist * SITTINGPERCENT << std::endl;
+//    std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
+//    std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
 
-    std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
+//    std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
 
     if( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
             && LKneeLHipDist > 0 && RKneeRHipDist > 0 && person.LAnkle.confidence > 0 && person.RAnkle.confidence > 0 ) {
@@ -575,8 +587,8 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     } else {
         attributes.gesture = NEUTRAL;
     }
-    std::cout << "Gesture: \t" << gesture_name[ attributes.gesture - 1 ] << std::endl;
-    std::cout << "posture: \t" << posture_name[ attributes.posture - 1 ] << std::endl;
+//    std::cout << "Gesture: \t" << gesture_name[ attributes.gesture - 1 ] << std::endl;
+//    std::cout << "posture: \t" << posture_name[ attributes.posture - 1 ] << std::endl;
     attributesWithPose.attributes = attributes;
     return attributesWithPose;
 }
@@ -694,8 +706,8 @@ cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat ima
         }
     }
 
-    printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
-    printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
+//    printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
+//    printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
 
     if (cropx + cropwidth >= image.size().width) { cropwidth = cropwidth - std::abs((cropx + cropwidth) - image.size().width); }
     if (cropy + cropheight >= image.size().height) { cropheight = cropheight - std::abs((cropy + cropheight) - image.size().height); }
@@ -804,7 +816,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     std::string result_color = "no color";
     int max_bin_count = 0;
     for (std::map<std::string,int>::iterator it = bin_colors.begin(); it != bin_colors.end(); ++it) {
-        std::cout << it->first << " bins: " << it->second << std::endl;
+//        std::cout << it->first << " bins: " << it->second << std::endl;
         if(max_bin_count < it->second) {
             result_color = it->first;
             max_bin_count = it->second;
