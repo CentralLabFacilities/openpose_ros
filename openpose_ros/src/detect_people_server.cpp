@@ -402,9 +402,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         if(visualize) {
             attributes.attributes.posture;
             person_list.at(i).Nose;
-            cv::putText(output_image, "G: " + gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
+            cv::putText(output_image, gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
                          cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
-            cv::putText(output_image, "P: " + posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
+            cv::putText(output_image, posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
                          cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
         }
 
