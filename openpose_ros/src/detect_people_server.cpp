@@ -340,7 +340,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         if(gender_age) {
             try {
-                // printf("Gender and age is ON");
                 int crop_x, crop_y, crop_width, crop_height;
                 getHeadBounds(person,crop_x, crop_y, crop_width, crop_height, color_image);
                 if(crop_x >= 0) {
@@ -363,7 +362,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         }
         if(shirt_color) {
-                // printf("Shirt detection is ON \n");
                 try{
                         shirt_list.push_back(getShirtColor(person, color_image));
                 } catch (cv::Exception e) {
@@ -382,12 +380,13 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             for (size_t i = 0; i < gender_age_srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
                 std::cout << "GENDER HYPOTHESES:\t" << gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
                 std::cout << "AGE HYPOTHESES:\t" << gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability << std::endl;
-                    person_list.at(i).gender_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
-                    person_list.at(i).age_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
-                    cv::putText(output_image, string("G: ") + std::to_string(person_list.at(i).gender_hyp), cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
-                                cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
-                    cv::putText(output_image, string("A: ") + std::to_string(person_list.at(i).age_hyp), cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
-                                cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
+                person_list.at(i).gender_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability;
+                person_list.at(i).age_hyp = gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).age_probability;
+                cv::putText(output_image, std::string(person_list.at(i).gender_hyp.gender), cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v-40),
+                            cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
+                cv::putText(output_image, std::string("A: ") + std::string(person_list.at(i).age_hyp.age), cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v-20),
+                            cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
+
             }
         }
     }
@@ -396,7 +395,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 std::string shirtcolor = shirt_list[i];
                 ROS_DEBUG(">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
                 person_list.at(i).shirtcolor = shirtcolor;
-                cv::putText(output_image, string("S: ") + shirtcolor, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+40),
+                cv::putText(output_image, std::string("S: ") + shirtcolor, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
                             cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
         }
     }
@@ -409,9 +408,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             attributes.attributes.posture;
             person_list.at(i).Nose;
             // Draw person gesture and posture
-            cv::putText(output_image, string("G: ") + gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+60),
+            cv::putText(output_image, std::string("G: ") + gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
                          cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
-            cv::putText(output_image, string("P: ") + posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+80),
+            cv::putText(output_image, std::string("P: ") + posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+40),
                          cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
         }
 
@@ -516,12 +515,12 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             if(face_id_srv.response.known) {
                 attributes.attributes.name = face_id_srv.response.name;
                 // Draw person gesture and posture
-                cv::putText(output_image, string("N: ") + attributes.attributes.name, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+100),
+                cv::putText(output_image, std::string("N: ") + attributes.attributes.name, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+60),
                             cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
 
             } else {
                 attributes.attributes.name = "unknown";
-                cv::putText(output_image, string("N: ") + attributes.attributes.name, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+120),
+                cv::putText(output_image, std::string("N: ") + attributes.attributes.name, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+60),
                             cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
             }
         }
@@ -586,7 +585,6 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
 //    std::cout << "LAnkleLHipDist * SittingPercent: " << LAnkleLHipDist * SITTINGPERCENT << std::endl;
 //    std::cout << "RKneeRHipDist: " << RKneeRHipDist << std::endl;
 //    std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
-
 //    std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
 
     if( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
@@ -614,8 +612,6 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     } else {
         attributes.gesture = NEUTRAL;
     }
-//    std::cout << "Gesture: \t" << gesture_name[ attributes.gesture - 1 ] << std::endl;
-//    std::cout << "posture: \t" << posture_name[ attributes.posture - 1 ] << std::endl;
     attributesWithPose.attributes = attributes;
     return attributesWithPose;
 }
@@ -733,9 +729,6 @@ cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat ima
         }
     }
 
-//    printf ("#1: person.RShoulder.u: %d, person.RShoulder.v: %d. \n", person.RShoulder.u, person.RShoulder.v);
-//    printf ("#1: x: %d, y: %d, width: %d, height: %d. \n", cropx, cropy, cropwidth, cropheight);
-
     if (cropx + cropwidth >= image.size().width) { cropwidth = cropwidth - std::abs((cropx + cropwidth) - image.size().width); }
     if (cropy + cropheight >= image.size().height) { cropheight = cropheight - std::abs((cropy + cropheight) - image.size().height); }
 
@@ -843,7 +836,6 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     std::string result_color = "no color";
     int max_bin_count = 0;
     for (std::map<std::string,int>::iterator it = bin_colors.begin(); it != bin_colors.end(); ++it) {
-//        std::cout << it->first << " bins: " << it->second << std::endl;
         if(max_bin_count < it->second) {
             result_color = it->first;
             max_bin_count = it->second;
@@ -938,7 +930,6 @@ int main(int argc, char **argv) {
     coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
     localNH.param("visualize", visualize, true);
-
     localNH.param("visualize_uuid", visualize_uuid, false);
 
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
