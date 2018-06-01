@@ -283,16 +283,14 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     if(pose_key_points.getSize(0) == 0) {
         return res;
     }
+    cv::Mat output_image;
 
     if (visualize) {
         pose_renderer = new  op::PoseCpuRenderer{pose_model,0.5,true,0.5,0.5};
         op::Array<float> output_array;
         output_array = cvMatToOpOutput.createArray(color_image, scale_input_to_output, output_resolution);
         pose_renderer->renderPose(output_array,pose_key_points,scale_input_to_output);
-        auto output_image = opOutputToCvMat.formatToCvMat(output_array);
-
-        cv::imshow("CLF OpenPose", output_image);
-        cv::waitKey(3);
+        output_image = opOutputToCvMat.formatToCvMat(output_array);
     }
 
     for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
@@ -378,8 +376,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
     if(gender_age) {
         gender_age_ptr.get()->call(gender_age_srv);
-        ROS_INFO(">> Gender Age: %u", (int)gender_age_srv.response.gender_and_age_response.gender_and_age_list.size());
-        ROS_INFO(">> Person Size: %u", (int)person_list.size());
+        ROS_DEBUG(">> Gender Age: %u", (int)gender_age_srv.response.gender_and_age_response.gender_and_age_list.size());
+        ROS_DEBUG(">> Person Size: %u", (int)person_list.size());
         if((int)gender_age_srv.response.gender_and_age_response.gender_and_age_list.size() == (int)person_list.size()) {
             for (size_t i = 0; i < gender_age_srv.response.gender_and_age_response.gender_and_age_list.size(); ++i) {
                 std::cout << "GENDER HYPOTHESES:\t" << gender_age_srv.response.gender_and_age_response.gender_and_age_list.at(i).gender_probability << std::endl;
@@ -392,7 +390,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     if(shirt_color) {
         for (int i = 0; i < shirt_list.size(); i++)	{
                 std::string shirtcolor = shirt_list[i];
-                ROS_INFO (">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
+                ROS_DEBUG(">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
                 person_list.at(i).shirtcolor = shirtcolor;
         }
     }
@@ -400,6 +398,17 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     for( size_t i = 0; i < person_list.size(); i++ ) {
 
         openpose_ros_msgs::PersonAttributesWithPose attributes = getPostureAndGesture( person_list.at(i) );
+
+        if(visualize) {
+            attributes.attributes.posture;
+            person_list.at(i).Nose;
+            cv::putText(output_image, gesture_name[ attributes.attributes.gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.u),
+                         cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255,255,255));
+            cv::putText(output_image, gesture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u+20 , person_list.at(i).Nose.u),
+                         cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255,255,255));
+        }
+
+
         // HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
         cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
@@ -502,6 +511,11 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             } else {
                 attributes.attributes.name = "unknown";
             }
+        }
+
+        if(visualize) {
+            cv::imshow("CLF OpenPose", output_image);
+            cv::waitKey(3);
         }
 
         attributes.pose_stamped = base_link_pose;
