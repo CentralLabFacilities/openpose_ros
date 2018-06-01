@@ -125,8 +125,8 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
             std::cout << "PERSON " << i << ": " << std::endl;
             std::cout << "\t " << "Name: " << res.attributes.at(i).attributes.name << std::endl;
-            std::cout << "\t " << "Age: " << res.attributes.at(i).attributes.age_hyp << std::endl;
-            std::cout << "\t " << "Gender: " << res.attributes.at(i).attributes.gender_hyp << std::endl;
+            std::cout << "\t " << "Age: " << res.attributes.at(i).attributes.age_hyp.age << std::endl;
+            std::cout << "\t " << "Gender: " << res.attributes.at(i).attributes.gender_hyp.gender << std::endl;
             std::cout << "\t " << "Gesture: " << gesture_name[ res.attributes.at(i).attributes.gesture - 1 ] << std::endl;
             std::cout << "\t " << "Posture: " << posture_name[ res.attributes.at(i).attributes.posture - 1 ] << std::endl;
             std::cout << "\t " << "Shirtcolor: " << res.attributes.at(i).attributes.shirtcolor << std::endl;
