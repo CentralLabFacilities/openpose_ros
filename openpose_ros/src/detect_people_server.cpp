@@ -590,7 +590,10 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
 //    std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
 
     if( ( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
-            && LKneeLHipDist > 0 && RKneeRHipDist > 0 && person.LAnkle.confidence > 0 && person.RAnkle.confidence > 0 ) || LKneeLHipDist < (LShoulderLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RShoulderRHipDist * SITTINGPERCENT) ) {
+            && LKneeLHipDist > 0 && RKneeRHipDist > 0 && person.LAnkle.confidence > 0 && person.RAnkle.confidence > 0 ) ||
+            ( ( LKneeLHipDist < (LShoulderLHipDist * SITTINGPERCENT ) || RKneeRHipDist < (RShoulderRHipDist * SITTINGPERCENT) )
+            && person.LHip.confidence > 0 && person.RHip.confidence > 0 && person.LKnee.confidence > 0 && person.RKnee.confidence > 0
+            && person.LShoulder.confidence > 0 && person.RShoulder.confidence > 0) ) {
             attributes.posture = SITTING;
     } else if( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
               std::abs(RShoulderRHipAngle - Horizontal) < std::abs(RShoulderRHipAngle - Vertical) ||
