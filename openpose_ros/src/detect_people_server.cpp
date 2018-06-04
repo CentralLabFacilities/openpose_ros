@@ -567,12 +567,14 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     double Horizontal = 180;
 
 
+    double LShoulderLHipDist = sqrt(pow(LShoulder.y - LHip.y , 2));
     double LShoulderLWristAngle = calcAngle(LShoulder,LWrist);
     double LShoulderLHipAngle = calcAngle(LShoulder,LHip);
     double LKneeLHipDist = sqrt(pow(LKnee.y - LHip.y , 2));
     double LAnkleLHipDist = sqrt(pow(LAnkle.y - LHip.y , 2));
 
 
+    double RShoulderRHipDist = sqrt(pow(RShoulder.y - RHip.y , 2));
     double RShoulderRWristAngle = calcAngle(RShoulder, RWrist);
     double RShoulderRHipAngle = calcAngle(RShoulder, RHip);
     double RKneeRHipDist = sqrt(pow(RKnee.y - RHip.y , 2));
@@ -587,8 +589,8 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
 //    std::cout << "RAnkleRHipDist * sittingPercent: " << RAnkleRHipDist * SITTINGPERCENT << std::endl;
 //    std::cout << "CONFIDENCE FEET: " << person.LAnkle.confidence << " : " << person.RAnkle.confidence << std::endl;
 
-    if( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
-            && LKneeLHipDist > 0 && RKneeRHipDist > 0 && person.LAnkle.confidence > 0 && person.RAnkle.confidence > 0 ) {
+    if( ( ( LKneeLHipDist < (LAnkleLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RAnkleRHipDist * SITTINGPERCENT) )
+            && LKneeLHipDist > 0 && RKneeRHipDist > 0 && person.LAnkle.confidence > 0 && person.RAnkle.confidence > 0 ) || LKneeLHipDist < (LShoulderLHipDist * SITTINGPERCENT) || RKneeRHipDist < (RShoulderRHipDist * SITTINGPERCENT) ) {
             attributes.posture = SITTING;
     } else if( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
               std::abs(RShoulderRHipAngle - Horizontal) < std::abs(RShoulderRHipAngle - Vertical) ||
