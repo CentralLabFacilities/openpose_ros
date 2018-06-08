@@ -689,6 +689,7 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     attributes.gender_hyp = person.gender_hyp;
     attributes.age_hyp = person.age_hyp;
     attributes.shirtcolor = person.shirtcolor;
+    std::vector<int> gestures;
 
     cv::Point LWrist = cv::Point(person.LWrist.u, person.LWrist.v);
     cv::Point LShoulder = cv::Point(person.LShoulder.u, person.LShoulder.v);
@@ -734,22 +735,23 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     }
 
     if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
-            attributes.gesture = POINTING_RIGHT;
+            gestures.push_back(POINTING_RIGHT);
     }
     else if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
-            attributes.gesture = POINTING_LEFT;
+            gestures.push_back(POINTING_LEFT);
     }
     else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
-            attributes.gesture = RAISING_LEFT_ARM;
+            gestures.push_back(RAISING_LEFT_ARM);
     } else if (person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
-            attributes.gesture = RAISING_RIGHT_ARM;
+            gestures.push_back(RAISING_RIGHT_ARM);
     } else if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
                 (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0)) {
-        attributes.gesture = WAVING;
+        gestures.push_back(WAVING);
     }  else {
-        attributes.gesture = NEUTRAL;
+        gestures.push_back(NEUTRAL);
     }
 
+    attribute.gestures = gestures;
     attributesWithPose.attributes = attributes;
     return attributesWithPose;
 }
