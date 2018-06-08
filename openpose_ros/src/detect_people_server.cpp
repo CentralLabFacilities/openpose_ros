@@ -86,7 +86,7 @@ boost::shared_ptr<ros::ServiceClient> recognize_face_id_ptr;
 boost::shared_ptr<ros::ServiceClient> learn_face_id_ptr;
 boost::shared_ptr<ros::ServiceClient> depth_color_client_ptr;
 openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
-std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face = false);
+std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face = false, bool track_body = true);
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 openpose_ros_msgs::PersonDetection initPersonDetection();
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res);
@@ -165,7 +165,7 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
         cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::TYPE_16UC1);
         depth_image = cv_bridge_depth->image;
 
-        getPersonList(color_image, depth_image, req.name, true).size() == 0 ? res.success = false : res.success = true;
+        getPersonList(color_image, depth_image, req.name, true, false).size() == 0 ? res.success = false : res.success = true;
 
     } else {
 
@@ -287,7 +287,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 }
 
 
-std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face) {
+std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face, bool track_body) {
 
     std::vector<openpose_ros_msgs::PersonAttributesWithPose> res;
     op::Array<float> net_input_array;
@@ -412,6 +412,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             res.push_back(attributes);
         }
         return res;
+
+    } else if(track_body) {
 
     } else {
 
