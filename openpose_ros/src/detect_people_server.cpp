@@ -86,7 +86,7 @@ boost::shared_ptr<ros::ServiceClient> recognize_face_id_ptr;
 boost::shared_ptr<ros::ServiceClient> learn_face_id_ptr;
 boost::shared_ptr<ros::ServiceClient> depth_color_client_ptr;
 openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
-std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face = false, bool track_body = true);
+std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face = false, bool track_body = false);
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 openpose_ros_msgs::PersonDetection initPersonDetection();
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res);
