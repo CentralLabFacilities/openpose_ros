@@ -348,6 +348,7 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     attributes.gender_hyp = person.gender_hyp;
     attributes.age_hyp = person.age_hyp;
     attributes.shirtcolor = person.shirtcolor;
+    std::vector<int> gestures;
 
     cv::Point LWrist = cv::Point(person.LWrist.u, person.LWrist.v);
     cv::Point LShoulder = cv::Point(person.LShoulder.u, person.LShoulder.v);
@@ -391,16 +392,17 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
 
     if ((person.LWrist.v < person.LShoulder.v && person.LWrist.v > 0 && person.LShoulder.v > 0) ||
         (person.RWrist.v < person.RShoulder.v && person.RWrist.v > 0 && person.RShoulder.v > 0)) {
-            attributes.gesture = WAVING;
+            gestures.push_back(WAVING);
     }
      else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
-        attributes.gesture = RAISING_LEFT_ARM;
+        gestures.push_back(RAISING_LEFT_ARM);
     } else if(person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
-        attributes.gesture = RAISING_RIGHT_ARM;
+        gestures.push_back(RAISING_RIGHT_ARM);
     } else {
-        attributes.gesture = NEUTRAL;
+        gestures.push_back(NEUTRAL);
     }
-    std::cout << "Gesture: \t" << attributes.gesture << std::endl;
+    attribute.gestures = gestures;
+    std::cout << "Gestures: \t" << attributes.gestures << std::endl;
     std::cout << "posture: \t" << attributes.posture << std::endl;
     return attributes;
 }
