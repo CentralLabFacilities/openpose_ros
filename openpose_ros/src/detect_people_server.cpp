@@ -371,7 +371,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 }
             }
             getHeadBounds(person, crop_x, crop_y, crop_width, crop_height, color_image);
-            cv::Vec3f pt = getDepth( depth_image, (crop_x + crop_width/2) / (640/320), (crop_y + crop_height/2) / (480/240),
+
+            cv::Vec3f pt = getDepth( depth_image, (crop_x + crop_width/2) / (color_image.cols/depth_image.cols), (crop_y + crop_height/2) / (color_image.rows/depth_image.rows),
                                      161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
             if( pt[0] < dist  && pt[0] != 0.0f ) {
@@ -556,7 +557,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             // HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
             cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
-            cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (640/320), (roi.y + roi.height/2) / (480/240),
+            cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (color_image.cols/depth_image.cols), (roi.y + roi.height/2) / (color_image.rows/depth_image.rows),
                                      161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
             cv::Rect roidepth = cv::Rect(roi.x/2,roi.y/2,roi.width/2, roi.height/2);
@@ -593,7 +594,10 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
                 ROS_DEBUG("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
 
-                cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) / (640/320), (roiHead.y + roiHead.height/2) / (480/240),
+
+
+                cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) /  (color_image.cols/depth_image.cols),
+                                              (roiHead.y + roiHead.height/2) /  (color_image.rows/depth_image.rows),
                                          161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
 
                 cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
