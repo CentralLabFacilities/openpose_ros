@@ -403,7 +403,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 learn_face_id_ptr.get()->call(learn_face_id_srv);
             }
         } catch (cv::Exception e) {
-                std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
+                std::cout << "Exception in learn face! ROI could be wrong!" << e.what();
         }
 
         if(learn_face_id_srv.response.success) {
@@ -493,6 +493,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                     }
                 } catch (cv::Exception e) {
                         std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
+                        gender_age_srv.request.objects.pop_back();
                 }
 
             }
@@ -641,12 +642,13 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                         cv::Mat crop = color_image(roi);
                         sensor_msgs::ImagePtr inputImage_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", crop).toImageMsg();
                         face_id_srv.request.roi = *inputImage_msg;
+                        recognize_face_id_ptr.get()->call(face_id_srv);
                     }
                 } catch (cv::Exception e) {
-                        std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
+                        std::cout << "Exception in face id! ROI could be wrong!" << e.what();
+
                 }
 
-                recognize_face_id_ptr.get()->call(face_id_srv);
 
                 if(face_id_srv.response.known) {
                     attributes.attributes.name = face_id_srv.response.name;
