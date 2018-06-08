@@ -11,6 +11,7 @@
                 <param name="scale_gap" value="0.3" />
                 <param name="crowd_attribute_service_topic" value="/open_pose/get_crowd_attributes" />
                 <param name="learn_face_service_topic" value="/open_pose/learn_face" />
+                <param name="shirt_roi_service_topic" value="/open_pose/shirt_roi" />
                 <param name="models_folder" value="$(arg path)" />
                 <param name="path_to_config" value="$(arg path_to_config)" />
                 <param name="gpu_id" value="0" />
