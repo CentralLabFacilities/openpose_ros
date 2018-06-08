@@ -493,7 +493,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                     }
                 } catch (cv::Exception e) {
                         std::cout << "Exception in gender and age! ROI could be wrong!" << e.what();
-                        gender_age_srv.request.objects.pop_back();
                 }
 
             }
