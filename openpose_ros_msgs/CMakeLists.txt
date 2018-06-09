@@ -4,6 +4,7 @@ project(openpose_ros_msgs)
 find_package(catkin REQUIRED
   COMPONENTS
     std_msgs
+    actionlib
     sensor_msgs
     message_generation
     geometry_msgs
