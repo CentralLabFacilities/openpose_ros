@@ -4,7 +4,7 @@ project(openpose_ros_msgs)
 find_package(catkin REQUIRED
   COMPONENTS
     std_msgs
-    actionlib
+    actionlib_msgs
     sensor_msgs
     message_generation
     geometry_msgs
@@ -29,12 +29,14 @@ add_service_files(
 )
 
 add_action_files(
+  DIRECTORY action
   FILES
    GetCrowdAttributesWithPose.action
 )
 
 generate_messages(
    DEPENDENCIES
+   actionlib_msgs
    std_msgs
    geometry_msgs
    gender_and_age_msgs
