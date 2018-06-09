@@ -27,6 +27,11 @@ add_service_files(
    GetFollowRoi.srv
 )
 
+add_action_files(
+  FILES
+   GetCrowdAttributesWithPose.action
+)
+
 generate_messages(
    DEPENDENCIES
    std_msgs
