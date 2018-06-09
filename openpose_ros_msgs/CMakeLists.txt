@@ -24,7 +24,7 @@ add_service_files(
    GetPersonAttributes.srv
    GetCrowdAttributes.srv
    GetCrowdAttributesWithPose.srv
-   GetShirtRoi.srv
+   GetFollowRoi.srv
 )
 
 generate_messages(
