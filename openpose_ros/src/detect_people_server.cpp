@@ -22,7 +22,7 @@
 #include <openpose_ros_msgs/BodyPartDetection.h>
 #include <openpose_ros_msgs/GetCrowdAttributesWithPose.h>
 #include <openpose_ros_msgs/PersonAttributesWithPose.h>
-#include <openpose_ros_msgs/GetShirtRoi.h>
+#include <openpose_ros_msgs/GetFollowRoi.h>
 #include <bayes_people_tracker_msgs/PeopleTrackerImage.h>
 #include <algorithm>
 #include <math.h>
@@ -178,7 +178,7 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
     return true;
 }
 
-bool shirtRoiCb(openpose_ros_msgs::GetShirtRoi::Request &req, openpose_ros_msgs::GetShirtRoi::Response &res) {
+bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &req, openpose_ros_msgs::GetFollowRoi::Response &res) {
 
     ROS_INFO("\n------------------------- New Shirt Roi Attributes Callback -------------------------\n");
     pepper_clf_msgs::DepthAndColorImage srv;
