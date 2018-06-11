@@ -1,5 +1,6 @@
 bool gender_and_age
 bool face_id
+float32 resize_out_ratio
 ---
 PersonAttributesWithPose[] attributes
 ---
