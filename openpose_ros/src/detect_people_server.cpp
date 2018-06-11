@@ -1156,7 +1156,7 @@ int main(int argc, char **argv) {
     localNH.param("learn_face_service_topic", learn_face_topic, learn_face_topic);
 
     std::string shirt_roi_service_topic = "/open_pose/shirt_roi";
-    localNH.param("learn_face_service_topic", shirt_roi_service_topic, shirt_roi_service_topic);
+    localNH.param("shirt_roi_service_topic", shirt_roi_service_topic, shirt_roi_service_topic);
 
     ros::NodeHandle n;
 
