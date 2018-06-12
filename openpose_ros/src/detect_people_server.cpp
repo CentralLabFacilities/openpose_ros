@@ -848,30 +848,36 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
             && person.LHip.confidence > 0 && person.RHip.confidence > 0 && person.LKnee.confidence > 0 && person.RKnee.confidence > 0
             && person.LShoulder.confidence > 0 && person.RShoulder.confidence > 0) ) {
             attributes.posture = SITTING;
-    } else if( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
+    } else if( ( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
               std::abs(RShoulderRHipAngle - Horizontal) < std::abs(RShoulderRHipAngle - Vertical) ||
-              LShoulderLHipAngle < 45 || RShoulderRHipAngle < 45 ) {
+              LShoulderLHipAngle < 45 || RShoulderRHipAngle < 45 ) && person.LShoulder.confidence > 0
+              && person.LHip.confidence > 0 && person.RHip.confidence > 0 && person.LShoulder.confidence > 0 ) {
            attributes.posture = LYING;
     } else {
         attributes.posture = STANDING;
     }
 
-    if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
+
+    if ( ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) &&
+                person.RShoulder.confidence >= 0 && person.RWrist.confidence >= 0 ) {
             gestures.push_back(POINTING_RIGHT);
     }
-    if ( ( 0 <= LShoulderLWristAngle && LShoulderLWristAngle <= 15 ) || ( 165 <= LShoulderLWristAngle && LShoulderLWristAngle <= 180 ) ) {
+    if ( ( ( 0 <= LShoulderLWristAngle && LShoulderLWristAngle <= 15 ) || ( 165 <= LShoulderLWristAngle && LShoulderLWristAngle <= 180 ) ) &&
+                person.LShoulder.confidence > 0 && person.LWrist.confidence > 0 ) {
             gestures.push_back(POINTING_LEFT);
     }
-    if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
+    if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0 && person.LElbow.confidence > 0 && person.LShoulder.confidence > 0) {
             gestures.push_back(RAISING_LEFT_ARM);
     }
-    if (person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
+    if (person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0 && person.RElbow.confidence > 0 && person.RShoulder.confidence > 0) {
             gestures.push_back(RAISING_RIGHT_ARM);
     }
-    if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
-                (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0)) {
+    if ( ( (person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
+                (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0) ) &&
+                 person.LWrist.confidence > 0 && person.LEar.confidence > 0 && person.RWrist.confidence > 0 && person.REar.confidence > 0 ) {
         gestures.push_back(WAVING);
-    } else {
+    }
+    if (gestures.size() == 0) {
         gestures.push_back(NEUTRAL);
     }
 
