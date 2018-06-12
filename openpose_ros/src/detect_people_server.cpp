@@ -94,6 +94,8 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
 cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat image );
+cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person);
+
 
  tf::TransformListener* listener;
 
@@ -189,6 +191,11 @@ bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &req, openpose_ros_msgs
 
     depth_color_client_ptr.get()->call(srv);
 
+    res.roi.x_offset = 0;
+    res.roi.y_offset = 0;
+    res.roi.width = 0;
+    res.roi.height = 0;
+
     if ( srv.response.success ) {
 
         cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
@@ -203,7 +210,7 @@ bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &req, openpose_ros_msgs
            res.roi.y_offset = person.at(0).pose_stamped.pose.orientation.y;
            res.roi.width = person.at(0).pose_stamped.pose.orientation.w;
            res.roi.height = person.at(0).pose_stamped.pose.orientation.z;
-       } else {
+       } else {    
            ROS_ERROR("NO BOUNDING BOX FOR SHIRT ROI!");
            return false;
        }
@@ -516,7 +523,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             person_list.push_back(person);
         }
 
-        cv::Rect roi = getUpperBodyRoi(person_list.at(n), color_image);
+        cv::Rect roi = getCrotchRoi(person_list.at(n));
         openpose_ros_msgs::PersonAttributesWithPose attributes;
         attributes.pose_stamped.pose.orientation.x = roi.x;
         attributes.pose_stamped.pose.orientation.y = roi.y;
@@ -852,17 +859,19 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
     if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
             gestures.push_back(POINTING_RIGHT);
     }
-    else if ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) {
+    if ( ( 0 <= LShoulderLWristAngle && LShoulderLWristAngle <= 15 ) || ( 165 <= LShoulderLWristAngle && LShoulderLWristAngle <= 180 ) ) {
             gestures.push_back(POINTING_LEFT);
     }
-    else if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
+    if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0) {
             gestures.push_back(RAISING_LEFT_ARM);
-    } else if (person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
+    }
+    if (person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0) {
             gestures.push_back(RAISING_RIGHT_ARM);
-    } else if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
+    }
+    if ((person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
                 (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0)) {
         gestures.push_back(WAVING);
-    }  else {
+    } else {
         gestures.push_back(NEUTRAL);
     }
 
@@ -893,6 +902,43 @@ openpose_ros_msgs::PersonDetection initPersonDetection() {
     person.LEar = initBodyPartDetection();
     person.Chest = initBodyPartDetection();
     return person;
+}
+
+cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person) {
+
+    cv::Rect roi;
+    roi.x = 0;
+    roi.y = 0;
+    roi.width = 0;
+    roi.height = 0;
+
+    if(person.RShoulder.confidence <= 0 || person.LShoulder.confidence <= 0 ||
+            person.RHip.confidence <= 0 || person.LHip.confidence <= 0) {
+        ROS_ERROR("Cant create crotch bounding box!");
+        return roi;
+    }
+
+    if(person.RShoulder.u < person.LShoulder.u) {
+        roi.x = person.RShoulder.u;
+        roi.y = person.RShoulder.v + std::abs(person.RHip.v - person.RShoulder.v) * 0.6;
+        roi.width = std::abs(person.RShoulder.u - person.LShoulder.u);
+        roi.height = std::abs(person.RHip.v - roi.y) * 2;
+    } else {
+        roi.x = person.LShoulder.u;
+        roi.y = person.LShoulder.v + std::abs(person.LHip.v - person.LShoulder.v) * 0.6;
+        roi.width = std::abs(person.LShoulder.u - person.RShoulder.u);
+        roi.height = std::abs(person.LHip.v - roi.y) * 2;
+    }
+
+    if(roi.x = roi.width > 640) {
+        roi.width = 640 - roi.x;
+    }
+
+    if(roi.y = roi.height > 480) {
+        roi.height = 480 - roi.y;
+    }
+
+    return roi;
 }
 
 cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat image ) {
