@@ -1063,7 +1063,7 @@ std::string getPixelColorType(cv::Scalar hsv_val)
         color = "black";
     else if (V > 190 && S < 27)
         color = "white";
-    else if (S < 53 && V < 185)
+    else if (S < 60 && V < 190)
         color = "grey";
     else {    // Is a color
         if (H < 14)
@@ -1176,6 +1176,10 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
     height = width * 1.5;
     y = v - height/2;
 
+    if(y < 0) {
+        height += y;
+        y = 0;
+    }
     if (image.size().width <= (x+width)) {
         width -= (x+width - image.size().width);
     }
