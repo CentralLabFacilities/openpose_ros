@@ -11,6 +11,9 @@
 #include <openpose/pose/headers.hpp>
 #include <openpose/utilities/headers.hpp>
 
+#include <image_transport/image_transport.h>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <ros/node_handle.h>
 #include <ros/service_server.h>
 #include <ros/init.h>
@@ -65,6 +68,8 @@ op::PoseExtractorCaffe *poseExtractorCaffe;
 
 op::PoseCpuRenderer *pose_renderer;
 op::OpOutputToCvMat opOutputToCvMat;
+
+image_transport::Publisher resImgPub;
 
 std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
@@ -789,6 +794,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 cv::waitKey(3);
             }
 
+            sensor_msgs::ImagePtr res_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", output_image).toImageMsg();
+            resImgPub.publish(res_img_msg);
+
             attributes.pose_stamped = base_link_pose;
             attributes.head_pose_stamped = base_link_pose_head;
 
@@ -1204,6 +1212,9 @@ int main(int argc, char **argv) {
 
     ros::init(argc, argv, "detect_people_server");
     ros::NodeHandle localNH("~");
+
+    image_transport::ImageTransport it(localNH);
+    resImgPub = it.advertise("/open_pose/result", 1);
 
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);

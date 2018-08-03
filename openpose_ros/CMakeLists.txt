@@ -10,6 +10,7 @@ add_definitions(-std=c++11)
 find_package(catkin REQUIRED
   roscpp
   cv_bridge
+  image_transport
   tf
 #  roslib
   gender_and_age_msgs
