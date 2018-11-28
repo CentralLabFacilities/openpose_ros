@@ -401,8 +401,11 @@ openpose_ros_msgs::PersonAttributes getPostureAndGesture(openpose_ros_msgs::Pers
     } else {
         gestures.push_back(NEUTRAL);
     }
-    attribute.gestures = gestures;
-    std::cout << "Gestures: \t" << attributes.gestures << std::endl;
+    attributes.gestures = gestures;
+    std::cout << "Gestures: \t";
+    for (auto const& g : gestures)
+        std::cout << g << "; ";
+    std::cout << std::endl;
     std::cout << "posture: \t" << attributes.posture << std::endl;
     return attributes;
 }
