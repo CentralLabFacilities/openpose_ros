@@ -17,6 +17,8 @@ add_message_files(
    PersonDetection.msg
    PersonAttributes.msg
    PersonAttributesWithPose.msg
+   Posture.msg
+   Gesture.msg
 )
 
 add_service_files(

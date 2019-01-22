@@ -10,11 +10,11 @@ add_definitions(-std=c++11)
 find_package(catkin REQUIRED
   roscpp
   cv_bridge
+  image_transport
   tf
-  roslib
+#  roslib
   gender_and_age_msgs
   openpose_ros_msgs
-  bayes_people_tracker_msgs
 )
 
 find_package(OpenCV REQUIRED)
