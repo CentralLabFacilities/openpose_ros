@@ -18,8 +18,11 @@
 #include <ros/service_server.h>
 #include <ros/init.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/Point.h>
 #include <cv_bridge/cv_bridge.h>
+#include <openpose_ros_msgs/Posture.h>
+#include <openpose_ros_msgs/Gesture.h>
 #include <openpose_ros_msgs/DetectPeople.h>
 #include <openpose_ros_msgs/PersonDetection.h>
 #include <openpose_ros_msgs/BodyPartDetection.h>
@@ -31,7 +34,6 @@
 #include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 
-#include <pepper_clf_msgs/DepthAndColorImage.h>
 #include <clf_perception_vision_msgs/DoIKnowThatPersonImage.h>
 #include <clf_perception_vision_msgs/LearnPersonImage.h>
 #include <clf_perception_vision_msgs/LearnPerson.h>
@@ -43,10 +45,14 @@
 #include <cstdint>
 #include <opencv2/core/core.hpp>
 
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+
 #define PI 3.14159265
 
-enum gesture{POINTING_LEFT = 1, POINTING_RIGHT = 2, RAISING_LEFT_ARM = 3, RAISING_RIGHT_ARM = 4, WAVING = 5, NEUTRAL = 6};
-enum posture{SITTING = 1, STANDING = 2, LYING = 3};
+enum gesture{POINTING_LEFT = openpose_ros_msgs::Gesture::POINTING_LEFT, POINTING_RIGHT = openpose_ros_msgs::Gesture::POINTING_RIGHT, RAISING_LEFT_ARM = openpose_ros_msgs::Gesture::RAISING_LEFT_ARM, RAISING_RIGHT_ARM = openpose_ros_msgs::Gesture::RAISING_RIGHT_ARM, WAVING = openpose_ros_msgs::Gesture::WAVING, NEUTRAL = openpose_ros_msgs::Gesture::NEUTRAL};
+enum posture{SITTING = openpose_ros_msgs::Posture::SITTING, STANDING = openpose_ros_msgs::Posture::STANDING, LYING = openpose_ros_msgs::Posture::LYING};
 
 const char* gesture_name[] = { "POINTING_LEFT", "POINTING_RIGHT", "RAISING_LEFT_ARM", "RAISING_RIGHT_ARM", "WAVING", "NEUTRAL" } ;
 const char* posture_name[] = { "SITTING", "STANDING", "LYING" } ;
@@ -74,23 +80,22 @@ image_transport::Publisher resImgPub;
 std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
 double scale_gap;
-cv::Mat input_image;
-cv::Mat depth_image;
-bayes_people_tracker_msgs::PeopleTrackerImage people_tracker_images;
-std::mutex person_mutex;
-std::mutex image_mutex;
-std::mutex depth_image_mutex;
+
+std::string input_image_depth_frame_id;
+cv::Mat input_image_rgb_crowd;
+cv::Mat input_image_depth_crowd;
+std::mutex image_mutex_crowd;
+
 bool visualize;
-bool visualize_uuid;
 bool gender_age = false;
 bool face_id = false;
-bool depth_srv = false;
 bool shirt_color = true;
 double SITTINGPERCENT = 0.4;
+
 boost::shared_ptr<ros::ServiceClient> gender_age_ptr;
 boost::shared_ptr<ros::ServiceClient> recognize_face_id_ptr;
 boost::shared_ptr<ros::ServiceClient> learn_face_id_ptr;
-boost::shared_ptr<ros::ServiceClient> depth_color_client_ptr;
+
 openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person);
 std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face = false, bool track_body = false);
 openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
@@ -101,8 +106,9 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
 cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat image );
 cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person);
 
+void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg);
 
- tf::TransformListener* listener;
+tf::TransformListener* listener;
 
 int WHITE, BLACK, GREY, RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE = 0;
 
@@ -117,70 +123,34 @@ void initializeOP() {
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
     ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
-    pepper_clf_msgs::DepthAndColorImage srv;
-    cv_bridge::CvImagePtr cv_bridge_color;
-    cv_bridge::CvImagePtr cv_bridge_depth;
-    cv::Mat color_image;
-    cv::Mat depth_image;
+    image_mutex_crowd.lock();
+    res.attributes = getPersonList(input_image_rgb_crowd, input_image_depth_crowd, input_image_depth_frame_id);
+    image_mutex_crowd.unlock();
 
-    depth_color_client_ptr.get()->call(srv);
+    for( size_t i = 0 ; i < res.attributes.size() ; i++) {
 
-    if ( srv.response.success ) {
-
-        cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
-        color_image = cv_bridge_color->image;
-        cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::TYPE_16UC1);
-        depth_image = cv_bridge_depth->image;
-
-        res.attributes = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
-
-        for( size_t i = 0 ; i < res.attributes.size() ; i++) {
-
-            std::cout << "PERSON " << i << ": " << std::endl;
-            std::cout << "\t " << "Name: " << res.attributes.at(i).attributes.name << std::endl;
-            std::cout << "\t " << "Age: " << res.attributes.at(i).attributes.age_hyp.age << std::endl;
-            std::cout << "\t " << "Gender: " << res.attributes.at(i).attributes.gender_hyp.gender << std::endl;
-            std::cout << "\t " << "Gesture: " << gesture_name[ res.attributes.at(i).attributes.gestures.at(0) - 1 ] << std::endl;
-            std::cout << "\t " << "Posture: " << posture_name[ res.attributes.at(i).attributes.posture - 1 ] << std::endl;
-            std::cout << "\t " << "Shirtcolor: " << res.attributes.at(i).attributes.shirtcolor << std::endl;
-
-        }
-
-    } else {
-
-        ROS_ERROR("Service Call failed! Unable to get Images!");
+        std::cout << "PERSON " << i << ": " << std::endl;
+        std::cout << "\t " << "Name: " << res.attributes.at(i).attributes.name << std::endl;
+        std::cout << "\t " << "Age: " << res.attributes.at(i).attributes.age_hyp.age << std::endl;
+        std::cout << "\t " << "Gender: " << res.attributes.at(i).attributes.gender_hyp.gender << std::endl;
+        std::cout << "\t " << "Gesture: " << gesture_name[ res.attributes.at(i).attributes.gestures.at(0).gesture - 1 ] << std::endl;
+        std::cout << "\t " << "Posture: " << posture_name[ res.attributes.at(i).attributes.posture.posture - 1 ] << std::endl;
+        std::cout << "\t " << "Shirtcolor: " << res.attributes.at(i).attributes.shirtcolor << std::endl;
 
     }
+
     return true;
 }
 
 bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perception_vision_msgs::LearnPerson::Response &res) {
 
     ROS_INFO("\n------------------------- New Learn Face Callback -------------------------\n");
-    pepper_clf_msgs::DepthAndColorImage srv;
-    cv_bridge::CvImagePtr cv_bridge_color;
-    cv_bridge::CvImagePtr cv_bridge_depth;
-    cv::Mat color_image;
-    cv::Mat depth_image;
-
-    depth_color_client_ptr.get()->call(srv);
-
-    if ( srv.response.success && face_id ) {
-
-        cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
-        color_image = cv_bridge_color->image;
-        cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::TYPE_16UC1);
-        depth_image = cv_bridge_depth->image;
-
-        getPersonList(color_image, depth_image, req.name, true, false).size() == 0 ? res.success = false : res.success = true;
-
+    if (face_id) {
+        image_mutex_crowd.lock();
+        getPersonList(input_image_rgb_crowd, input_image_depth_crowd, req.name, true, false).size() == 0 ? res.success = false : res.success = true;
+        image_mutex_crowd.unlock();
     } else {
-
-        if(face_id) {
-            ROS_ERROR("Service Call failed! Unable to get Images!");
-        } else {
-            ROS_ERROR("Service call failed! face id not running?");
-        }
+        ROS_ERROR("Face id must be running to learn faces!");
     }
     return true;
 }
@@ -188,40 +158,22 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
 bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &req, openpose_ros_msgs::GetFollowRoi::Response &res) {
 
     ROS_INFO("\n------------------------- New Shirt Roi Attributes Callback -------------------------\n");
-    pepper_clf_msgs::DepthAndColorImage srv;
-    cv_bridge::CvImagePtr cv_bridge_color;
-    cv_bridge::CvImagePtr cv_bridge_depth;
-    cv::Mat color_image;
-    cv::Mat depth_image;
-
-    depth_color_client_ptr.get()->call(srv);
-
     res.roi.x_offset = 0;
     res.roi.y_offset = 0;
     res.roi.width = 0;
     res.roi.height = 0;
 
-    if ( srv.response.success ) {
+    image_mutex_crowd.lock();
+    std::vector<openpose_ros_msgs::PersonAttributesWithPose> person = getPersonList(input_image_rgb_crowd, input_image_depth_crowd, input_image_depth_frame_id);
+    image_mutex_crowd.unlock();
 
-        cv_bridge_color = cv_bridge::toCvCopy(srv.response.color, sensor_msgs::image_encodings::BGR8);
-        color_image = cv_bridge_color->image;
-        cv_bridge_depth = cv_bridge::toCvCopy(srv.response.depth, sensor_msgs::image_encodings::TYPE_16UC1);
-        depth_image = cv_bridge_depth->image;
-
-       std::vector<openpose_ros_msgs::PersonAttributesWithPose> person = getPersonList(color_image, depth_image, srv.response.depth.header.frame_id);
-
-       if(person.at(0).pose_stamped.pose.orientation.x != 0) {
-           res.roi.x_offset = person.at(0).pose_stamped.pose.orientation.x;
-           res.roi.y_offset = person.at(0).pose_stamped.pose.orientation.y;
-           res.roi.width = person.at(0).pose_stamped.pose.orientation.w;
-           res.roi.height = person.at(0).pose_stamped.pose.orientation.z;
-       } else {    
-           ROS_ERROR("NO BOUNDING BOX FOR SHIRT ROI!");
-           return false;
-       }
-
-    } else {
-        ROS_ERROR("Service Call failed! Unable to get Images!");
+    if(person.at(0).pose_stamped.pose.orientation.x != 0) {
+        res.roi.x_offset = person.at(0).pose_stamped.pose.orientation.x;
+        res.roi.y_offset = person.at(0).pose_stamped.pose.orientation.y;
+        res.roi.width = person.at(0).pose_stamped.pose.orientation.w;
+        res.roi.height = person.at(0).pose_stamped.pose.orientation.z;
+    } else {    
+        ROS_ERROR("NO BOUNDING BOX FOR SHIRT ROI!");
         return false;
     }
 
@@ -668,9 +620,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 attributes.attributes.posture;
                 person_list.at(i).Nose;
                 // Draw person gesture and posture
-                cv::putText(output_image, std::string("G: ") + gesture_name[ attributes.attributes.gestures.at(0) - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
+                cv::putText(output_image, std::string("G: ") + gesture_name[ attributes.attributes.gestures.at(0).gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
                              cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
-                cv::putText(output_image, std::string("P: ") + posture_name[ attributes.attributes.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+40),
+                cv::putText(output_image, std::string("P: ") + posture_name[ attributes.attributes.posture.posture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+40),
                              cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
             }
 
@@ -816,10 +768,12 @@ double calcAngle(cv::Point p1, cv::Point p2) {
 openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_msgs::PersonDetection person) {
     openpose_ros_msgs::PersonAttributesWithPose attributesWithPose;
     openpose_ros_msgs::PersonAttributes attributes;
+    openpose_ros_msgs::Gesture gesture;
+
     attributes.gender_hyp = person.gender_hyp;
     attributes.age_hyp = person.age_hyp;
     attributes.shirtcolor = person.shirtcolor;
-    std::vector<int> gestures;
+    std::vector<openpose_ros_msgs::Gesture> gestures;
 
     cv::Point LWrist = cv::Point(person.LWrist.u, person.LWrist.v);
     cv::Point LShoulder = cv::Point(person.LShoulder.u, person.LShoulder.v);
@@ -855,38 +809,50 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
             ( ( LKneeLHipDist < (LShoulderLHipDist * SITTINGPERCENT ) || RKneeRHipDist < (RShoulderRHipDist * SITTINGPERCENT) )
             && person.LHip.confidence > 0 && person.RHip.confidence > 0 && person.LKnee.confidence > 0 && person.RKnee.confidence > 0
             && person.LShoulder.confidence > 0 && person.RShoulder.confidence > 0) ) {
-            attributes.posture = SITTING;
+            attributes.posture.posture = SITTING;
     } else if( ( std::abs(LShoulderLHipAngle - Horizontal) < std::abs(LShoulderLHipAngle - Vertical) ||
               std::abs(RShoulderRHipAngle - Horizontal) < std::abs(RShoulderRHipAngle - Vertical) ||
               LShoulderLHipAngle < 45 || RShoulderRHipAngle < 45 ) && person.LShoulder.confidence > 0
               && person.LHip.confidence > 0 && person.RHip.confidence > 0 && person.LShoulder.confidence > 0 ) {
-           attributes.posture = LYING;
+           attributes.posture.posture = LYING;
     } else {
-        attributes.posture = STANDING;
+        attributes.posture.posture = STANDING;
     }
 
 
     if ( ( ( 0 <= RShoulderRWristAngle && RShoulderRWristAngle <= 15 ) || ( 165 <= RShoulderRWristAngle && RShoulderRWristAngle <= 180 ) ) &&
                 person.RShoulder.confidence >= 0 && person.RWrist.confidence >= 0 ) {
-            gestures.push_back(POINTING_RIGHT);
+            gesture = openpose_ros_msgs::Gesture();
+            gesture.gesture = openpose_ros_msgs::Gesture::POINTING_RIGHT;
+            gestures.push_back(gesture);
     }
     if ( ( ( 0 <= LShoulderLWristAngle && LShoulderLWristAngle <= 15 ) || ( 165 <= LShoulderLWristAngle && LShoulderLWristAngle <= 180 ) ) &&
                 person.LShoulder.confidence > 0 && person.LWrist.confidence > 0 ) {
-            gestures.push_back(POINTING_LEFT);
+            gesture = openpose_ros_msgs::Gesture();
+            gesture.gesture = openpose_ros_msgs::Gesture::POINTING_LEFT;
+            gestures.push_back(gesture);
     }
     if (person.LElbow.v < person.LShoulder.v && person.LElbow.v > 0 && person.LShoulder.v > 0 && person.LElbow.confidence > 0 && person.LShoulder.confidence > 0) {
-            gestures.push_back(RAISING_LEFT_ARM);
+            gesture = openpose_ros_msgs::Gesture();
+            gesture.gesture = openpose_ros_msgs::Gesture::RAISING_LEFT_ARM;
+            gestures.push_back(gesture);
     }
     if (person.RElbow.v < person.RShoulder.v && person.RElbow.v > 0 && person.RShoulder.v > 0 && person.RElbow.confidence > 0 && person.RShoulder.confidence > 0) {
-            gestures.push_back(RAISING_RIGHT_ARM);
+            gesture = openpose_ros_msgs::Gesture();
+            gesture.gesture = openpose_ros_msgs::Gesture::RAISING_RIGHT_ARM;
+            gestures.push_back(gesture);
     }
     if ( ( (person.LWrist.v < person.LEar.v && person.LWrist.v > 0 && person.LEar.v > 0) ||
                 (person.RWrist.v < person.REar.v && person.RWrist.v > 0 && person.REar.v > 0) ) &&
                  person.LWrist.confidence > 0 && person.LEar.confidence > 0 && person.RWrist.confidence > 0 && person.REar.confidence > 0 ) {
-        gestures.push_back(WAVING);
+        gesture = openpose_ros_msgs::Gesture();
+        gesture.gesture = openpose_ros_msgs::Gesture::WAVING;
+        gestures.push_back(gesture);
     }
     if (gestures.size() == 0) {
-        gestures.push_back(NEUTRAL);
+        gesture = openpose_ros_msgs::Gesture();
+        gesture.gesture = openpose_ros_msgs::Gesture::NEUTRAL;
+        gestures.push_back(gesture);
     }
 
     attributes.gestures = gestures;
@@ -1208,6 +1174,32 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
     return bodypart;
 }
 
+void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg, const sensor_msgs::CameraInfoConstPtr &info_depth_msg) {
+    
+    cv::Mat color_image;
+    cv::Mat depth_image;
+
+    try {
+        color_image = cv_bridge::toCvCopy(color_msg, sensor_msgs::image_encodings::BGR8)->image;
+        depth_image = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+    }
+    catch (cv_bridge::Exception &e) {
+        ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
+        return;
+    }
+    
+    image_mutex_crowd.lock();
+    input_image_rgb_crowd = color_image;
+    input_image_depth_crowd = depth_image;
+    input_image_depth_frame_id = info_depth_msg->header.frame_id;
+    if (visualize) {
+        cv::imshow("CLF OpenPose | Crowd", input_image_rgb_crowd);
+        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
+        cv::waitKey(3);
+    }
+    image_mutex_crowd.unlock();
+}
+
 int main(int argc, char **argv) {
 
     ros::init(argc, argv, "detect_people_server");
@@ -1224,6 +1216,15 @@ int main(int argc, char **argv) {
 
     std::string shirt_roi_service_topic = "/open_pose/shirt_roi";
     localNH.param("shirt_roi_service_topic", shirt_roi_service_topic, shirt_roi_service_topic);
+
+    std::string image_rgb_topic = "/camera/rgb/image_raw";
+    localNH.param("image_rgb_topic", image_rgb_topic, image_rgb_topic);
+
+    std::string image_depth_topic = "/camera/depth/image_raw";
+    localNH.param("image_depth_topic", image_depth_topic, image_depth_topic);
+
+    std::string camera_depth_info_topic = "/camera/depth/camera_info";
+    localNH.param("camera_depth_info_topic", camera_depth_info_topic, camera_depth_info_topic);
 
     ros::NodeHandle n;
 
@@ -1251,14 +1252,25 @@ int main(int argc, char **argv) {
     localNH.param("scale_gap", scale_gap, 0.3);
 
     pose_model = op::PoseModel::COCO_18;
-    localNH.param("models_folder", models_folder, std::string("/home/nao/ros_distro/share/openpose/models/"));
+
+    std::string package_path = ros::package::getPath("openpose_ros");
+    models_folder = package_path + "/../openpose/models/";
+    localNH.param("models_folder", models_folder, models_folder);
 
     localNH.param("gpu_id", gpu_id, 0);
 
     coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
     localNH.param("visualize", visualize, true);
-    localNH.param("visualize_uuid", visualize_uuid, false);
+
+    message_filters::Subscriber<sensor_msgs::Image> image_color_sub(n, image_rgb_topic, 1);
+	message_filters::Subscriber<sensor_msgs::Image> image_depth_sub(n, image_depth_topic, 1);
+    message_filters::Subscriber<sensor_msgs::CameraInfo> camera_depth_sub(n, camera_depth_info_topic, 1);
+
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> ImgSyncPolicy;
+	message_filters::Synchronizer<ImgSyncPolicy> sync(ImgSyncPolicy(10), image_color_sub, image_depth_sub, camera_depth_sub);
+
+    sync.registerCallback(boost::bind(&imagesCb, _1, _2, _3));  
 
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
     ros::ServiceServer serviceLearn = n.advertiseService(learn_face_topic, learnFaceCb);
@@ -1269,13 +1281,6 @@ int main(int argc, char **argv) {
         ROS_INFO(">> Gender and age classify service exists.");
         gender_age = true;
         gender_age_ptr.reset(new ros::ServiceClient(n.serviceClient<gender_and_age_msgs::GenderAndAgeService>("clf_gender_age_classify_array")));
-    }
-
-    // One shot picture service
-    if(ros::service::exists("naoqi_driver/get_images", false)) {
-        depth_srv = true;
-        ROS_INFO(">> Color image service exists.");
-        depth_color_client_ptr.reset(new ros::ServiceClient(n.serviceClient<pepper_clf_msgs::DepthAndColorImage>("naoqi_driver/get_images")));
     }
 
     // Recognize and learn face service
