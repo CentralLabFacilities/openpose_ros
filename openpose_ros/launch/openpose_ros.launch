@@ -1,5 +1,6 @@
 <launch>
-	<arg name="path" default="/media/vol/robocup/tiago-sim/share/openpose/models/"/>
+
+	<arg name="path" default="$(find openpose_ros)/../openpose/models/"/>
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
 		<param name="image_rgb_topic" value="/xtion/rgb/image_raw" />
 		<param name="image_depth_topic" value="/xtion/depth_registered/image_raw" />
