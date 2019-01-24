@@ -1,6 +1,7 @@
 <launch>
 
 	<arg name="path" default="$(find openpose_ros)/../openpose/models/"/>
+	<arg name="target_frame" default="map" />
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
 		<param name="image_rgb_topic" value="/xtion/rgb/image_raw" />
 		<param name="image_depth_topic" value="/xtion/depth_registered/image_raw" />
@@ -16,5 +17,7 @@
                 <param name="models_folder" value="$(arg path)" />
 		<param name="gpu_id" value="0" />
                 <param name="visualize" value="true" />
+		<param name="target_frame" value="$(arg target_frame)" />
+		<param name="isInMM" value="false" />
     </node>
 </launch>

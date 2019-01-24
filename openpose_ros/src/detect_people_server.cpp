@@ -59,6 +59,7 @@ const char* gesture_name[] = { "POINTING_LEFT", "POINTING_RIGHT", "RAISING_LEFT_
 const char* posture_name[] = { "SITTING", "STANDING", "LYING" } ;
 int gpu_id;
 std::string models_folder;
+std::string target_frame_id;
 std::shared_ptr <op::PoseExtractor> pose_extractor;
 
 // OP
@@ -85,6 +86,11 @@ double scale_gap;
 std::string input_image_depth_frame_id;
 cv::Mat input_image_rgb_crowd;
 cv::Mat input_image_depth_crowd;
+float depth_fx;
+float depth_fy;
+float depth_cx;
+float depth_cy;
+bool isInMM;
 std::mutex image_mutex_crowd;
 
 bool visualize;
@@ -197,11 +203,11 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
     cv::Vec3f pt;
 
+    bool is16BitType = depthImage.type() == CV_16UC1; // is in mm?
+
     // Use correct principal point from calibration
     float center_x = cx; //cameraInfo.K.at(2)
     float center_y = cy; //cameraInfo.K.at(5)
-
-    bool isInMM = depthImage.type() == CV_16UC1; // is in mm?
 
     // Combine unit conversion (if necessary) with scaling by focal length for computing (X,Y)
     float unit_scaling = isInMM?0.001f:1.0f;
@@ -212,25 +218,19 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
     float depth;
     bool isValid;
 
-    if(isInMM) {
-        ROS_DEBUG(">>> Image is in Millimeters");
-
+    if(is16BitType) {
         // Sample fore depth points to the right, left, top and down
         std::vector<float> valueList;
         for (int i=0; i<5; i++) {
-            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y,x+i));
             if((float)depthImage.at<uint16_t>(y,x+i) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y,x+i));
             }
-            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y,x-i));
             if((float)depthImage.at<uint16_t>(y,x-i) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y,x-i));
             }
-            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y+i,x));
             if((float)depthImage.at<uint16_t>(y+i,x) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y+i,x));
             }
-            ROS_DEBUG("%f", (float)depthImage.at<uint16_t>(y-i,x));
             if((float)depthImage.at<uint16_t>(y-i,x) != 0){
                 valueList.push_back((float)depthImage.at<uint16_t>(y-i,x));
             }
@@ -242,7 +242,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
             std::sort (valueList.begin(), valueList.end());
             float median = valueList[(int)(valueList.size()/2)];
             depth = median;
-            ROS_DEBUG("%f", depth);
+            ROS_DEBUG("Median of depth: %f", depth);
             isValid = true;
         } else {
             depth = 0;
@@ -250,7 +250,6 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         }
 
     } else {
-        ROS_DEBUG(">>> Image is in Meters");
         float depth_samples[21];
 
         // Sample fore depth points to the right, left, top and down
@@ -268,14 +267,14 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
         float median = arr_size % 2 ? depth_samples[arr_size/2] : (depth_samples[arr_size/2-1] + depth_samples[arr_size/2]) / 2;
 
         depth = median;
-        ROS_DEBUG("%f", depth);
+        ROS_DEBUG("Median of depth: %f", depth);
         isValid = std::isfinite(depth);
     }
 
     // Check for invalid measurements
     if (!isValid)
     {
-        ROS_DEBUG(">>> WARN Image is invalid, whoopsie.");
+        ROS_WARN(">>> WARN Image is invalid, whoopsie.");
         pt.val[0] = pt.val[1] = pt.val[2] = bad_point;
     } else{
         // Fill in XYZ
@@ -310,10 +309,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
     const auto netInputArray = cvMatToOpInput->createArray(color_image, scale_input_to_net_inputs, net_input_sizes);
 
-    ROS_DEBUG("Detect poses using forward pass.");
     poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
     const auto pose_key_points = poseExtractorCaffe->getPoseKeypoints();
-
 
     ROS_DEBUG("Extracted %d people.", pose_key_points.getSize(0));
     if( pose_key_points.getSize(0) == 0 ) {
@@ -341,8 +338,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
                 bodypart.u = u;
                 bodypart.v = v;
-
-                ROS_DEBUG("u: %d, v: %d", u, v);
 
                 std::string bodypart_name = coco_body_parts[j];
 
@@ -376,7 +371,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             getHeadBounds(person, crop_x, crop_y, crop_width, crop_height, color_image);
 
             cv::Vec3f pt = getDepth( depth_image, (crop_x + crop_width/2) / (color_image.cols/depth_image.cols), (crop_y + crop_height/2) / (color_image.rows/depth_image.rows),
-                                     161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+                                     depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
             if( pt[0] < dist  && pt[0] != 0.0f ) {
                 dist = pt[0];
@@ -438,8 +433,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 bodypart.u = u;
                 bodypart.v = v;
 
-                ROS_DEBUG("u: %d, v: %d", u, v);
-
                 std::string bodypart_name = coco_body_parts[j];
 
                 ROS_DEBUG("BodyPartName: %s", bodypart_name.c_str());
@@ -472,7 +465,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             cv::Rect roi = getUpperBodyRoi(person, color_image);
 
             cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (color_image.cols/depth_image.cols), (roi.y + roi.height/2) / (color_image.rows/depth_image.rows),
-                                     161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+                                     depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
             if( pt[0] < dist  && pt[0] != 0.0f ) {
                 dist = pt[0];
@@ -516,8 +509,6 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
                 bodypart.u = u;
                 bodypart.v = v;
-
-                ROS_DEBUG("u: %d, v: %d", u, v);
 
                 std::string bodypart_name = coco_body_parts[j];
 
@@ -632,13 +623,13 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
             cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (color_image.cols/depth_image.cols), (roi.y + roi.height/2) / (color_image.rows/depth_image.rows),
-                                     161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+                                     depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
-            cv::Rect roidepth = cv::Rect(roi.x/2,roi.y/2,roi.width/2, roi.height/2);
+            cv::Rect roidepth = cv::Rect(roi.x,roi.y,roi.width, roi.height);
 
             geometry_msgs::PoseStamped camera_pose;
-            geometry_msgs::PoseStamped base_link_pose;
-            base_link_pose.header.frame_id = "base_link";
+            geometry_msgs::PoseStamped target_frame_pose;
+            target_frame_pose.header.frame_id = target_frame_id;
             camera_pose.header.frame_id = frame_id;
             camera_pose.header.stamp = ros::Time::now();
             camera_pose.pose.position.x = pt(0);
@@ -649,13 +640,15 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             camera_pose.pose.orientation.z = 0.0;
             camera_pose.pose.orientation.w = 1.0;
 
+            cv::circle(output_image, cv::Point(roi.x + roi.width/2, roi.y + roi.height/2), 10, cv::Scalar(255,255,255));
+
             int crop_x, crop_y, crop_width, crop_height;
             ROS_DEBUG("Calling get head bounds");
             getHeadBounds(person_list.at(i),crop_x, crop_y, crop_width, crop_height, color_image);
 
             geometry_msgs::PoseStamped camera_pose_head;
-            geometry_msgs::PoseStamped base_link_pose_head;
-            base_link_pose_head.header.frame_id = "base_link";
+            geometry_msgs::PoseStamped target_frame_pose_head;
+            target_frame_pose_head.header.frame_id = target_frame_id;
             bool gotHead = false;
 
             if(crop_x >= 0) {
@@ -669,10 +662,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 ROS_DEBUG("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
 
 
-
                 cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) /  (color_image.cols/depth_image.cols),
-                                              (roiHead.y + roiHead.height/2) /  (color_image.rows/depth_image.rows),
-                                         161.05772510763725, 120.01067491252732, 286.4931637345315, 286.7532312956228 ); //TODO: Remove hardcoding!
+                                              (roiHead.y + roiHead.height/2) /  (color_image.rows/depth_image.rows), depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
                 cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
 
@@ -687,27 +678,27 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 camera_pose_head.pose.orientation.z = 0.0;
                 camera_pose_head.pose.orientation.w = 1.0;
             } else {
-                base_link_pose_head.header.stamp = ros::Time::now();
-                base_link_pose_head.pose.position.x = NAN;
-                base_link_pose_head.pose.position.y = NAN;
-                base_link_pose_head.pose.position.z = NAN;
-                base_link_pose_head.pose.orientation.x = 0.0;
-                base_link_pose_head.pose.orientation.y = 0.0;
-                base_link_pose_head.pose.orientation.z = 0.0;
-                base_link_pose_head.pose.orientation.w = 1.0;
+                target_frame_pose_head.header.stamp = ros::Time::now();
+                target_frame_pose_head.pose.position.x = NAN;
+                target_frame_pose_head.pose.position.y = NAN;
+                target_frame_pose_head.pose.position.z = NAN;
+                target_frame_pose_head.pose.orientation.x = 0.0;
+                target_frame_pose_head.pose.orientation.y = 0.0;
+                target_frame_pose_head.pose.orientation.z = 0.0;
+                target_frame_pose_head.pose.orientation.w = 1.0;
             }
 
             try{
-                ROS_DEBUG("Transforming received position into BASELINK coordinate system.");
-                listener->waitForTransform(camera_pose.header.frame_id, base_link_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(20.0));
-                listener->transformPose(base_link_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, base_link_pose);
+                ROS_DEBUG("Transforming received position into target link coordinate system.");
+                listener->waitForTransform(camera_pose.header.frame_id, target_frame_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(20.0));
+                listener->transformPose(target_frame_pose.header.frame_id, ros::Time(0), camera_pose, camera_pose.header.frame_id, target_frame_pose);
                 if(gotHead) {
-                    listener->transformPose(base_link_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, base_link_pose_head);
+                    listener->transformPose(target_frame_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, target_frame_pose_head);
                 }
             } catch(tf::TransformException ex) {
                 ROS_WARN("Failed transform: %s", ex.what());
-                base_link_pose = camera_pose;
-                base_link_pose_head = camera_pose_head;
+                target_frame_pose = camera_pose;
+                target_frame_pose_head = camera_pose_head;
             }
 
             if(face_id) {
@@ -750,8 +741,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             sensor_msgs::ImagePtr res_img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", output_image).toImageMsg();
             resImgPub.publish(res_img_msg);
 
-            attributes.pose_stamped = base_link_pose;
-            attributes.head_pose_stamped = base_link_pose_head;
+            attributes.pose_stamped = target_frame_pose;
+            attributes.head_pose_stamped = target_frame_pose_head;
 
             res.push_back( attributes );
 
@@ -1193,11 +1184,21 @@ void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::Im
     input_image_rgb_crowd = color_image;
     input_image_depth_crowd = depth_image;
     input_image_depth_frame_id = info_depth_msg->header.frame_id;
+    
+    if (depth_fx == NULL) {
+        ROS_INFO("Setting camera intrinsics -  fx: %f; fy: %f; cx: %f; cy: %f", info_depth_msg->P[0], info_depth_msg->P[5], info_depth_msg->P[2], info_depth_msg->P[6]);
+    }
+
+    depth_fx = info_depth_msg->P[0];
+    depth_cx = info_depth_msg->P[2];
+    depth_fy = info_depth_msg->P[5];
+    depth_cy = info_depth_msg->P[6];
     if (visualize) {
         cv::imshow("CLF OpenPose | Crowd", input_image_rgb_crowd);
-        cv::resizeWindow("CLF OpenPose | Crowd", 320, 240);
+        cv::resizeWindow("CLF OpenPose | Crowd", 640, 480);
         cv::waitKey(3);
     }
+
     image_mutex_crowd.unlock();
 }
 
@@ -1226,6 +1227,12 @@ int main(int argc, char **argv) {
 
     std::string camera_depth_info_topic = "/camera/depth/camera_info";
     localNH.param("camera_depth_info_topic", camera_depth_info_topic, camera_depth_info_topic);
+
+    target_frame_id = "map";
+    localNH.param("target_frame", target_frame_id, target_frame_id);
+
+    isInMM = true;
+    localNH.param("isInMM", isInMM, isInMM);
 
     ros::NodeHandle n;
 
