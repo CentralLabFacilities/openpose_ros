@@ -1,7 +1,6 @@
 <launch>
-
 	<arg name="path" default="$(find openpose_ros)/../openpose/models/"/>
-	<arg name="target_frame" default="map" />
+	<arg name="target_frame" default="base_link" />
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
 		<param name="image_rgb_topic" value="/xtion/rgb/image_raw" />
 		<param name="image_depth_topic" value="/xtion/depth_registered/image_raw" />
