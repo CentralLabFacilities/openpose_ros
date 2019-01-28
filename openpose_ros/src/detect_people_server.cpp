@@ -131,6 +131,13 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
     ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
     image_mutex_crowd.lock();
+    
+    if (input_image_rgb_crowd.empty()) {
+        ROS_ERROR("No rgb and depth messages registered yet. Cannot work without images!");
+        image_mutex_crowd.unlock();
+        return false;    
+    } 
+
     res.attributes = getPersonList(input_image_rgb_crowd, input_image_depth_crowd, input_image_depth_frame_id);
     image_mutex_crowd.unlock();
 
@@ -1168,6 +1175,8 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
 
 void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg, const sensor_msgs::CameraInfoConstPtr &info_depth_msg) {
     
+    ROS_INFO_ONCE("First images registered by callback!");
+
     cv::Mat color_image;
     cv::Mat depth_image;
 
