@@ -30,7 +30,6 @@
 #include <openpose_ros_msgs/GetCrowdAttributesWithPose.h>
 #include <openpose_ros_msgs/PersonAttributesWithPose.h>
 #include <openpose_ros_msgs/GetFollowRoi.h>
-#include <bayes_people_tracker_msgs/PeopleTrackerImage.h>
 #include <algorithm>
 #include <math.h>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
