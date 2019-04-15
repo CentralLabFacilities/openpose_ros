@@ -108,7 +108,7 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 openpose_ros_msgs::PersonDetection initPersonDetection();
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res);
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
-std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image);
+std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image, cv::Rect &roi);
 cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat image );
 cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person);
 
@@ -572,7 +572,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             }
             if(shirt_color) {
                     try{
-                            shirt_list.push_back(getShirtColor(person, color_image));
+                            cv::Rect shirt_roi;
+                            shirt_list.push_back(getShirtColor(person, color_image, shirt_roi));
                     } catch (cv::Exception e) {
 
                             std::cout << "Exception in Shirt color! ROI could be wrong!" << std::endl;
@@ -750,6 +751,15 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             attributes.pose_stamped = target_frame_pose;
             attributes.head_pose_stamped = target_frame_pose_head;
 
+            if (shirt_color) {
+
+                cv::Rect shirt_roi;
+                shirt_list.push_back(getShirtColor(person_list.at(i), color_image, shirt_roi));
+                attributes.pose_stamped.pose.orientation.x = shirt_roi.x;
+                attributes.pose_stamped.pose.orientation.y = shirt_roi.y;
+                attributes.pose_stamped.pose.orientation.z = shirt_roi.height;
+                attributes.pose_stamped.pose.orientation.w = shirt_roi.width;
+            }
             res.push_back( attributes );
 
         }
@@ -1058,9 +1068,9 @@ std::string getPixelColorType(cv::Scalar hsv_val)
     return color;
 }
 
-std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image)	{
+std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image, cv::Rect &roi)	{
 	printf ("getShirtColor() \n");
-    cv::Rect roi = getUpperBodyRoi(person, image);
+    roi = getUpperBodyRoi(person, image);
 
     if (roi.x <= 0 || roi.y <= 0 || roi.width <= 0 || roi.height <= 0 )
         return "NO_BOUNDING_BOX";
