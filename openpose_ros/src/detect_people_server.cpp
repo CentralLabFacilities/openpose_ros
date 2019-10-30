@@ -85,8 +85,8 @@ double scale_gap;
 std::string input_image_depth_frame_id;
 cv::Mat input_image_rgb_crowd;
 cv::Mat input_image_depth_crowd;
-float depth_fx;
-float depth_fy;
+float depth_fx = 0.0;
+float depth_fy = 0.0;
 float depth_cx;
 float depth_cy;
 bool isInMM;
@@ -126,7 +126,7 @@ void initializeOP() {
 }
 
 
-bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
+bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &/*req*/, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
     ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
     image_mutex_crowd.lock();
@@ -168,7 +168,7 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
     return true;
 }
 
-bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &req, openpose_ros_msgs::GetFollowRoi::Response &res) {
+bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &/*req*/, openpose_ros_msgs::GetFollowRoi::Response &res) {
 
     ROS_INFO("\n------------------------- New Shirt Roi Attributes Callback -------------------------\n");
     res.roi.x_offset = 0;
@@ -242,7 +242,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
             }
         }
 
-        ROS_DEBUG("Sampled %d values", valueList.size());
+        ROS_DEBUG("Sampled %lu values", valueList.size());
 
         if(!valueList.empty()) {
             std::sort (valueList.begin(), valueList.end());
@@ -333,9 +333,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
         std::vector<openpose_ros_msgs::PersonDetection> person_list;
 
-        for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
+        for (int i = 0; i < pose_key_points.getSize(0); ++i) {
             openpose_ros_msgs::PersonDetection person = initPersonDetection();
-            for (size_t j = 0; j < pose_key_points.getSize(1); ++j) {
+            for (int j = 0; j < pose_key_points.getSize(1); ++j) {
                 size_t bodypart_id = 3 * (i * pose_key_points.getSize(1) + j);
                 openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
                 bodypart.confidence = pose_key_points[bodypart_id + 2];
@@ -420,16 +420,16 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
     } else if(track_body) {
 
-        int crop_x, crop_y, crop_width, crop_height;
+        //int crop_x, crop_y, crop_width, crop_height;
         float dist = 9999;
         int n = 0;
         clf_perception_vision_msgs::LearnPersonImage learn_face_id_srv;
 
         std::vector<openpose_ros_msgs::PersonDetection> person_list;
 
-        for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
+        for (int i = 0; i < pose_key_points.getSize(0); ++i) {
             openpose_ros_msgs::PersonDetection person = initPersonDetection();
-            for (size_t j = 0; j < pose_key_points.getSize(1); ++j) {
+            for (int j = 0; j < pose_key_points.getSize(1); ++j) {
                 size_t bodypart_id = 3 * (i * pose_key_points.getSize(1) + j);
                 openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
                 bodypart.confidence = pose_key_points[bodypart_id + 2];
@@ -504,9 +504,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             output_image = opOutputToCvMat.formatToCvMat(output_array);
         }
 
-        for (size_t i = 0; i < pose_key_points.getSize(0); ++i) {
+        for (int i = 0; i < pose_key_points.getSize(0); ++i) {
             openpose_ros_msgs::PersonDetection person = initPersonDetection();
-            for (size_t j = 0; j < pose_key_points.getSize(1); ++j) {
+            for (int j = 0; j < pose_key_points.getSize(1); ++j) {
                 size_t bodypart_id = 3 * (i * pose_key_points.getSize(1) + j);
                 openpose_ros_msgs::BodyPartDetection bodypart = initBodyPartDetection();
                 bodypart.confidence = pose_key_points[bodypart_id + 2];
@@ -602,9 +602,9 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             }
         }
         if(shirt_color) {
-            for (int i = 0; i < shirt_list.size(); i++)	{
+            for (size_t i = 0; i < shirt_list.size(); i++)	{
                     std::string shirtcolor = shirt_list[i];
-                    ROS_DEBUG(">> Shirt color person %d: %s, ", i, shirtcolor.c_str());
+                    ROS_DEBUG(">> Shirt color person %lu: %s, ", i, shirtcolor.c_str());
                     person_list.at(i).shirtcolor = shirtcolor;
                     cv::putText(output_image, std::string("S: ") + shirtcolor, cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v),
                                 cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(255,153,51));
@@ -616,7 +616,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             openpose_ros_msgs::PersonAttributesWithPose attributes = getPostureAndGesture( person_list.at(i) );
 
             if(visualize) {
-                attributes.attributes.posture;
+                attributes.attributes.posture; // TODO This statement has no effect. Why is it here?
                 person_list.at(i).Nose;
                 // Draw person gesture and posture
                 cv::putText(output_image, std::string("G: ") + gesture_name[ attributes.attributes.gestures.at(0).gesture - 1 ], cv::Point(person_list.at(i).Nose.u , person_list.at(i).Nose.v+20),
@@ -632,7 +632,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (color_image.cols/depth_image.cols), (roi.y + roi.height/2) / (color_image.rows/depth_image.rows),
                                      depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
-            cv::Rect roidepth = cv::Rect(roi.x,roi.y,roi.width, roi.height);
+            //cv::Rect roidepth = cv::Rect(roi.x,roi.y,roi.width, roi.height);
 
             geometry_msgs::PoseStamped camera_pose;
             geometry_msgs::PoseStamped target_frame_pose;
@@ -672,7 +672,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) /  (color_image.cols/depth_image.cols),
                                               (roiHead.y + roiHead.height/2) /  (color_image.rows/depth_image.rows), depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
-                cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
+                //cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
 
 
                 camera_pose_head.header.frame_id = frame_id;
@@ -918,11 +918,11 @@ cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person) {
         roi.height = std::abs(person.LHip.v - roi.y) * 2;
     }
 
-    if(roi.x = roi.width > 640) {
+    if(roi.x = roi.width > 640) { // TODO This looks wrong. What is meant here?
         roi.width = 640 - roi.x;
     }
 
-    if(roi.y = roi.height > 480) {
+    if(roi.y = roi.height > 480) { // TODO This looks wrong. What is meant here?
         roi.height = 480 - roi.y;
     }
 
@@ -1203,7 +1203,7 @@ void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::Im
     input_image_depth_crowd = depth_image;
     input_image_depth_frame_id = info_depth_msg->header.frame_id;
     
-    if (depth_fx == NULL) {
+    if (depth_fx == 0.0) {
         ROS_INFO("Setting camera intrinsics -  fx: %f; fy: %f; cx: %f; cy: %f", info_depth_msg->P[0], info_depth_msg->P[5], info_depth_msg->P[2], info_depth_msg->P[6]);
     }
 
