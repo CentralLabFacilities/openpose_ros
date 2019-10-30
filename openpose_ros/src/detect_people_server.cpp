@@ -92,6 +92,7 @@ float depth_cy;
 bool isInMM;
 std::mutex image_mutex_crowd;
 
+bool subscribe;
 bool visualize;
 bool gender_age = false;
 bool face_id = false;
@@ -129,6 +130,9 @@ void initializeOP() {
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &/*req*/, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
     ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
+    if(!subscribe && !waitForMessages()) { // If subscribe is false, call waitForMessages. If that returns false (failed), then don't continue with the service
+        return false;
+    }
     image_mutex_crowd.lock();
     
     if (input_image_rgb_crowd.empty()) {
@@ -158,6 +162,10 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perception_vision_msgs::LearnPerson::Response &res) {
 
     ROS_INFO("\n------------------------- New Learn Face Callback -------------------------\n");
+    if(!subscribe && !waitForMessages()) { // If subscribe is false, call waitForMessages. If that returns false (failed), then don't continue with the service
+        return false;
+    }
+    
     if (face_id) {
         image_mutex_crowd.lock();
         getPersonList(input_image_rgb_crowd, input_image_depth_crowd, req.name, true, false).size() == 0 ? res.success = false : res.success = true;
@@ -171,6 +179,9 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
 bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &/*req*/, openpose_ros_msgs::GetFollowRoi::Response &res) {
 
     ROS_INFO("\n------------------------- New Shirt Roi Attributes Callback -------------------------\n");
+    if(!subscribe && !waitForMessages()) { // If subscribe is false, call waitForMessages. If that returns false (failed), then don't continue with the service
+        return false;
+    }
     res.roi.x_offset = 0;
     res.roi.y_offset = 0;
     res.roi.width = 0;
@@ -1182,6 +1193,14 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
     return bodypart;
 }
 
+bool waitForImages() {
+    boost::shared_ptr<sensor_msgs::Image const> msg0;
+    boost::shared_ptr<sensor_msgs::Image const> msg1;
+    boost::shared_ptr<sensor_msgs::CameraInfo const> msg2;
+    waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic, NodeHandle& nh, 0.1, 10, msg0, msg1, msg2)
+    imagesCb(msg0, msg1, msg2);
+}
+
 void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg, const sensor_msgs::CameraInfoConstPtr &info_depth_msg) {
     
     ROS_INFO_ONCE("First images registered by callback!");
@@ -1227,6 +1246,8 @@ int main(int argc, char **argv) {
 
     image_transport::ImageTransport it(localNH);
     resImgPub = it.advertise("/open_pose/result", 1);
+    
+    localNH.param("subscribe", true, subscribe);
 
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
@@ -1289,14 +1310,16 @@ int main(int argc, char **argv) {
 
     localNH.param("visualize", visualize, true);
 
-    message_filters::Subscriber<sensor_msgs::Image> image_color_sub(n, image_rgb_topic, 1);
-	message_filters::Subscriber<sensor_msgs::Image> image_depth_sub(n, image_depth_topic, 1);
-    message_filters::Subscriber<sensor_msgs::CameraInfo> camera_depth_sub(n, camera_depth_info_topic, 1);
+    if(subscribe) {
+        message_filters::Subscriber<sensor_msgs::Image> image_color_sub(n, image_rgb_topic, 1);
+	    message_filters::Subscriber<sensor_msgs::Image> image_depth_sub(n, image_depth_topic, 1);
+        message_filters::Subscriber<sensor_msgs::CameraInfo> camera_depth_sub(n, camera_depth_info_topic, 1);
 
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> ImgSyncPolicy;
-	message_filters::Synchronizer<ImgSyncPolicy> sync(ImgSyncPolicy(10), image_color_sub, image_depth_sub, camera_depth_sub);
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> ImgSyncPolicy;
+	    message_filters::Synchronizer<ImgSyncPolicy> sync(ImgSyncPolicy(10), image_color_sub, image_depth_sub, camera_depth_sub);
 
-    sync.registerCallback(boost::bind(&imagesCb, _1, _2, _3));  
+        sync.registerCallback(boost::bind(&imagesCb, _1, _2, _3));
+    }  
 
     ros::ServiceServer serviceCrowd = n.advertiseService(crowdAttServTopic, getCrowdAttributesCb);
     ros::ServiceServer serviceLearn = n.advertiseService(learn_face_topic, learnFaceCb);
