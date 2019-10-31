@@ -49,6 +49,8 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include "topic2.hpp"
+
 #define PI 3.14159265
 
 enum gesture{POINTING_LEFT = openpose_ros_msgs::Gesture::POINTING_LEFT, POINTING_RIGHT = openpose_ros_msgs::Gesture::POINTING_RIGHT, RAISING_LEFT_ARM = openpose_ros_msgs::Gesture::RAISING_LEFT_ARM, RAISING_RIGHT_ARM = openpose_ros_msgs::Gesture::RAISING_RIGHT_ARM, WAVING = openpose_ros_msgs::Gesture::WAVING, NEUTRAL = openpose_ros_msgs::Gesture::NEUTRAL};
@@ -82,6 +84,10 @@ std::map<unsigned int, std::string> coco_body_parts;
 int scale_number;
 double scale_gap;
 
+ros::NodeHandle * global_nh = NULL;
+std::string image_rgb_topic;
+std::string image_depth_topic;
+std::string camera_depth_info_topic;
 std::string input_image_depth_frame_id;
 cv::Mat input_image_rgb_crowd;
 cv::Mat input_image_depth_crowd;
@@ -92,7 +98,7 @@ float depth_cy;
 bool isInMM;
 std::mutex image_mutex_crowd;
 
-bool subscribe;
+bool subscribe = true;
 bool visualize;
 bool gender_age = false;
 bool face_id = false;
@@ -112,8 +118,9 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image, cv::Rect &roi);
 cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat image );
 cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person);
+bool waitForImages();
 
-void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg);
+void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg, const sensor_msgs::CameraInfoConstPtr &info_depth_msg);
 
 tf::TransformListener* listener;
 
@@ -130,7 +137,7 @@ void initializeOP() {
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &/*req*/, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res) {
 
     ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
-    if(!subscribe && !waitForMessages()) { // If subscribe is false, call waitForMessages. If that returns false (failed), then don't continue with the service
+    if(!subscribe && !waitForImages()) { // If subscribe is false, call waitForImages. If that returns false (failed), then don't continue with the service
         return false;
     }
     image_mutex_crowd.lock();
@@ -162,7 +169,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perception_vision_msgs::LearnPerson::Response &res) {
 
     ROS_INFO("\n------------------------- New Learn Face Callback -------------------------\n");
-    if(!subscribe && !waitForMessages()) { // If subscribe is false, call waitForMessages. If that returns false (failed), then don't continue with the service
+    if(!subscribe && !waitForImages()) { // If subscribe is false, call waitForImages. If that returns false (failed), then don't continue with the service
         return false;
     }
     
@@ -179,7 +186,7 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
 bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &/*req*/, openpose_ros_msgs::GetFollowRoi::Response &res) {
 
     ROS_INFO("\n------------------------- New Shirt Roi Attributes Callback -------------------------\n");
-    if(!subscribe && !waitForMessages()) { // If subscribe is false, call waitForMessages. If that returns false (failed), then don't continue with the service
+    if(!subscribe && !waitForImages()) { // If subscribe is false, call waitForImages. If that returns false (failed), then don't continue with the service
         return false;
     }
     res.roi.x_offset = 0;
@@ -1197,7 +1204,8 @@ bool waitForImages() {
     boost::shared_ptr<sensor_msgs::Image const> msg0;
     boost::shared_ptr<sensor_msgs::Image const> msg1;
     boost::shared_ptr<sensor_msgs::CameraInfo const> msg2;
-    waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic, NodeHandle& nh, 0.1, 10, msg0, msg1, msg2)
+    ros::topic::MessagesHelper<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> helper;
+    helper.waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic, *global_nh, 0.1, ros::Duration(10, 0), msg0, msg1, msg2);
     imagesCb(msg0, msg1, msg2);
 }
 
@@ -1247,7 +1255,7 @@ int main(int argc, char **argv) {
     image_transport::ImageTransport it(localNH);
     resImgPub = it.advertise("/open_pose/result", 1);
     
-    localNH.param("subscribe", true, subscribe);
+    localNH.param("subscribe", subscribe, true);
 
     std::string crowdAttServTopic = "/open_pose/get_crowd_attributes";
     localNH.param("crowd_attribute_service_topic", crowdAttServTopic, crowdAttServTopic);
@@ -1258,13 +1266,13 @@ int main(int argc, char **argv) {
     std::string shirt_roi_service_topic = "/open_pose/shirt_roi";
     localNH.param("shirt_roi_service_topic", shirt_roi_service_topic, shirt_roi_service_topic);
 
-    std::string image_rgb_topic = "/camera/rgb/image_raw";
+    image_rgb_topic = "/camera/rgb/image_raw";
     localNH.param("image_rgb_topic", image_rgb_topic, image_rgb_topic);
 
-    std::string image_depth_topic = "/camera/depth/image_raw";
+    image_depth_topic = "/camera/depth/image_raw";
     localNH.param("image_depth_topic", image_depth_topic, image_depth_topic);
 
-    std::string camera_depth_info_topic = "/camera/depth/camera_info";
+    camera_depth_info_topic = "/camera/depth/camera_info";
     localNH.param("camera_depth_info_topic", camera_depth_info_topic, camera_depth_info_topic);
 
     target_frame_id = "map";
@@ -1274,6 +1282,7 @@ int main(int argc, char **argv) {
     localNH.param("isInMM", isInMM, isInMM);
 
     ros::NodeHandle n;
+    global_nh = &n; // n stays in scope until the end of the program
 
     listener = new tf::TransformListener();
 

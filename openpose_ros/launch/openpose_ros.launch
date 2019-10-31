@@ -4,10 +4,12 @@
 	<arg name="target_frame" default="base_link" />
 	<arg name="camera_rgb_topic" default="/xtion/rgb" />
 	<arg name="camera_depth_topic" default="/xtion/depth_registered" />
+	<arg name="subscribe" default="false" />
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
 		<param name="image_rgb_topic" value="$(arg camera_rgb_topic)/image_raw" />
 		<param name="image_depth_topic" value="$(arg camera_depth_topic)/image_raw" />
 		<param name="camera_depth_info_topic" value="$(arg camera_depth_topic)/camera_info" />
+		<param name="subscribe" value="$(arg subscribe)" />
 		<param name="net_input_size_width" value="320" />
 		<param name="net_input_size_height" value="160" />
 		<param name="net_output_size_width" value="320" />

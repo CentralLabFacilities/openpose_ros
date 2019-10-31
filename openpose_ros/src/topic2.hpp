@@ -80,9 +80,9 @@ private:
 
     void callback2(const boost::shared_ptr<M2 const>& message) {
         ROS_INFO_STREAM("callback2() called (" <<  ros::message_traits::datatype<M2>() << ") with timestamp " << message->header.stamp);
-        msgs1.push_back(message);
-        for(size_t i=0; i<msgs1.size(); i++) {
-            for(size_t j=0; j<msgs2.size(); j++) {
+        msgs2.push_back(message);
+        for(size_t i=0; i<msgs0.size(); i++) {
+            for(size_t j=0; j<msgs1.size(); j++) {
                 double diff=computeTimeDiff(msgs0[i]->header.stamp, msgs1[j]->header.stamp, message->header.stamp);
                 if(diff<timediff) {
                     timediff=diff;
