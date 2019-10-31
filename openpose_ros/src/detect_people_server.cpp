@@ -1205,7 +1205,7 @@ bool waitForImages() {
     boost::shared_ptr<sensor_msgs::Image const> msg1;
     boost::shared_ptr<sensor_msgs::CameraInfo const> msg2;
     ros::topic::MessagesHelper<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> helper;
-    helper.waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic, *global_nh, 0.1, ros::Duration(10, 0), msg0, msg1, msg2);
+    helper.waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic, *global_nh, 0.05, ros::Duration(10, 0), msg0, msg1, msg2);
     imagesCb(msg0, msg1, msg2);
 }
 

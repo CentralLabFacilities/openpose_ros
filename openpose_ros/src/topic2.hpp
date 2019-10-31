@@ -49,7 +49,7 @@ private:
         msgs0.push_back(message);
         for(size_t i=0; i<msgs1.size(); i++) {
             for(size_t j=0; j<msgs2.size(); j++) {
-                double diff=computeTimeDiff(message->header.stamp, msgs1[i]->header.stamp, msgs2[j]->header.stamp);
+                double diff=computeTimeDiff(message->header.stamp, msgs1.at(i)->header.stamp, msgs2.at(j)->header.stamp);
                 if(diff<timediff) {
                     timediff=diff;
                     index0=msgs0.size()-1;
@@ -66,7 +66,7 @@ private:
         msgs1.push_back(message);
         for(size_t i=0; i<msgs0.size(); i++) {
              for(size_t j=0; j<msgs2.size(); j++) {
-                double diff=computeTimeDiff(msgs0[i]->header.stamp, message->header.stamp, msgs2[j]->header.stamp);
+                double diff=computeTimeDiff(msgs0.at(i)->header.stamp, message->header.stamp, msgs2.at(j)->header.stamp);
                 if(diff<timediff) {
                     timediff=diff;
                     index0=i;
@@ -83,7 +83,7 @@ private:
         msgs2.push_back(message);
         for(size_t i=0; i<msgs0.size(); i++) {
             for(size_t j=0; j<msgs1.size(); j++) {
-                double diff=computeTimeDiff(msgs0[i]->header.stamp, msgs1[j]->header.stamp, message->header.stamp);
+                double diff=computeTimeDiff(msgs0.at(i)->header.stamp, msgs1.at(j)->header.stamp, message->header.stamp);
                 if(diff<timediff) {
                     timediff=diff;
                     index0=i;
@@ -201,11 +201,11 @@ void waitForMessages(const std::string& topic0, const std::string& topic1, const
     ROS_ERROR("behavior has wrong value");
   }
 
-  msg0 = msgs0[index0];//TODO check indices
-  msg1 = msgs1[index1];
-  msg2 = msgs2[index2];
+  ROS_INFO("timediff=%g, index0=%i, index1=%i, index2=%i, msgs0.size=%lu, msgs1.size=%lu, msgs2.size=%lu", timediff, index0, index1, index2, msgs0.size(), msgs1.size(), msgs2.size());
+  if(index0>=0) msg0 = msgs0.at(index0);//TODO check indices
+  if(index1>=0) msg1 = msgs1.at(index1);
+  if(index2>=0) msg2 = msgs2.at(index2);
   gettimeofday(&end, NULL);
-  ROS_INFO("timediff=%g, index0=%i, index1=%i, index2=%i, msgs0.size=%lu, msgs1.size=%lu, msgs2.size=%lu\n", timediff, index0, index1, index2, msgs0.size(), msgs1.size(), msgs2.size());
   ROS_INFO("waitForMessages finished in %g seconds", ((end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000000.0));
 }
 }; // class end
