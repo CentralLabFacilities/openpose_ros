@@ -4,7 +4,7 @@
 	<arg name="target_frame" default="base_link" />
 	<arg name="camera_rgb_topic" default="/xtion/rgb" />
 	<arg name="camera_depth_topic" default="/xtion/depth_registered" />
-	<arg name="subscribe" default="false" />
+	<arg name="subscribe" default="false" /> <!-- If true, subscribe to topics (slighly faster service calls). If false, wait for messages only when needed (far less traffic on topics). -->
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
 		<param name="image_rgb_topic" value="$(arg camera_rgb_topic)/image_raw" />
 		<param name="image_depth_topic" value="$(arg camera_depth_topic)/image_raw" />

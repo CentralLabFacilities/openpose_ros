@@ -1200,6 +1200,7 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection() {
     return bodypart;
 }
 
+// Wait for messages (two images and camera info), then call imagesCb for processing
 bool waitForImages() {
     boost::shared_ptr<sensor_msgs::Image const> msg0;
     boost::shared_ptr<sensor_msgs::Image const> msg1;
