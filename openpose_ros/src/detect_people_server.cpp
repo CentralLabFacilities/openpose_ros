@@ -139,6 +139,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
 
     ROS_INFO("\n------------------------- New Crowd Attributes Callback -------------------------\n");
     if(!subscribe && !waitForImages()) { // If subscribe is false, call waitForImages. If that returns false (failed), then don't continue with the service
+        ROS_ERROR("waitForImages failed");
         return false;
     }
     image_mutex_crowd.lock();
@@ -171,6 +172,7 @@ bool learnFaceCb(clf_perception_vision_msgs::LearnPerson::Request &req, clf_perc
 
     ROS_INFO("\n------------------------- New Learn Face Callback -------------------------\n");
     if(!subscribe && !waitForImages()) { // If subscribe is false, call waitForImages. If that returns false (failed), then don't continue with the service
+        ROS_ERROR("waitForImages failed");
         return false;
     }
     
@@ -188,6 +190,7 @@ bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &/*req*/, openpose_ros_
 
     ROS_INFO("\n------------------------- New Shirt Roi Attributes Callback -------------------------\n");
     if(!subscribe && !waitForImages()) { // If subscribe is false, call waitForImages. If that returns false (failed), then don't continue with the service
+        ROS_ERROR("waitForImages failed");
         return false;
     }
     res.roi.x_offset = 0;
@@ -1209,8 +1212,11 @@ bool waitForImages() {
     boost::shared_ptr<sensor_msgs::Image const> msg1;
     boost::shared_ptr<sensor_msgs::CameraInfo const> msg2;
     ros::topic::MessagesHelper<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> helper;
-    helper.waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic, *global_nh, 0.05, ros::Duration(10, 0), msg0, msg1, msg2);
+    helper.waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic,
+                           *global_nh, 0.05, ros::Duration(10, 0), msg0, msg1, msg2); // TODO maybe return false if one of the msgs is empty
     imagesCb(msg0, msg1, msg2);
+    ROS_DEBUG("waitForImages() finished");
+    return true;
 }
 
 void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg, const sensor_msgs::CameraInfoConstPtr &info_depth_msg) {
