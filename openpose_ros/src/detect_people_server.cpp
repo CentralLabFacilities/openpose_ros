@@ -6,6 +6,7 @@
 #include <openpose/pose/poseExtractorCaffe.hpp>
 #include <openpose/pose/poseParameters.hpp>
 #include <openpose/core/headers.hpp>
+
 #include <openpose/filestream/headers.hpp>
 #include <openpose/gui/headers.hpp>
 #include <openpose/pose/headers.hpp>
@@ -162,7 +163,7 @@ bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request
         std::cout << "\t " << "Shirtcolor: " << res.attributes.at(i).attributes.shirtcolor << std::endl;
 
     }
-
+    ROS_DEBUG("getCrowdAttributesCb finished successfully, found %lu persons", res.attributes.size());
     return true;
 }
 
@@ -314,7 +315,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
 
 std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat color_image, cv::Mat depth_image, std::string frame_id, bool learn_face, bool track_body) {
-
+    ROS_DEBUG("getPersonList() called");
     std::vector<openpose_ros_msgs::PersonAttributesWithPose> res;
     op::Array<float> net_input_array;
     std::vector<float> scale_ratios;
@@ -333,8 +334,10 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
     const auto netInputArray = cvMatToOpInput->createArray(color_image, scale_input_to_net_inputs, net_input_sizes);
 
+    ROS_DEBUG("Making caffe inference ...");
     poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
     const auto pose_key_points = poseExtractorCaffe->getPoseKeypoints();
+    ROS_DEBUG("Caffe inference done");
 
     ROS_DEBUG("Extracted %d people.", pose_key_points.getSize(0));
     if( pose_key_points.getSize(0) == 0 ) {
@@ -783,7 +786,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         }
 
     }
-
+    ROS_DEBUG("getPersonList finished");
     return res;
 }
 
