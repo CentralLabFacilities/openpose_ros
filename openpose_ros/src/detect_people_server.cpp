@@ -1119,7 +1119,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
     }
 
     cv::Mat hsv_crop_img;
-    cv::cvtColor(crop_img, hsv_crop_img, CV_BGR2HSV);
+    cv::cvtColor(crop_img, hsv_crop_img, cv::COLOR_BGR2HSV);
 
      std::map<std::string, int> bin_colors;
      bin_colors["white"] = 0;
@@ -1141,7 +1141,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
          for ( int x = 0; x < crop_img.cols - GRID_SIZE; x += GRID_SIZE ) {
              mask = cv::Mat::zeros(crop_img.size(), CV_8UC1);
              cv::Rect grid_rect( x, y, GRID_SIZE, GRID_SIZE );
-             cv::rectangle( mask, grid_rect, 255, CV_FILLED );     
+             cv::rectangle( mask, grid_rect, 255, cv::FILLED );     
              bin_colors[getPixelColorType(cv::mean(hsv_crop_img,mask))]++;
          }
      }
