@@ -526,6 +526,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             output_array = cvMatToOpOutput.createArray(color_image, scale_input_to_output, output_resolution);
             pose_renderer->renderPose(output_array,pose_key_points,scale_input_to_output);
             output_image = opOutputToCvMat.formatToCvMat(output_array);
+            delete pose_renderer; // destruct and free memory
         }
 
         for (int i = 0; i < pose_key_points.getSize(0); ++i) {
