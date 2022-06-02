@@ -33,6 +33,7 @@
 #include <openpose_ros_msgs/GetFollowRoi.h>
 #include <algorithm>
 #include <math.h>
+#include <mutex>
 #include <gender_and_age_msgs/GenderAndAgeService.h>
 
 #include <clf_perception_vision_msgs/DoIKnowThatPersonImage.h>
