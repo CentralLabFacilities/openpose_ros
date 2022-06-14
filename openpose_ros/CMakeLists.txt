@@ -27,6 +27,9 @@ include_directories(${OpenPose_INCLUDE_DIRS})
 find_package(Caffe REQUIRED)
 include_directories(${Caffe_INCLUDE_DIRS})
 
+find_package(Threads REQUIRED)
+
+
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 foreach(dir ${dirs})
   message(STATUS "dir='${dir}'")
@@ -55,6 +58,7 @@ target_link_libraries(detect_people_server
    ${OpenCV_LIBS}
    ${OpenPose_LIBS}
    ${Caffe_LIBS}
+   Threads::Threads
  )
 
 #############
