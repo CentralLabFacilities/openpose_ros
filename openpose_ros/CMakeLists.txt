@@ -27,6 +27,9 @@ include_directories(${OpenPose_INCLUDE_DIRS})
 find_package(Caffe REQUIRED)
 include_directories(${Caffe_INCLUDE_DIRS})
 
+find_package(Boost REQUIRED system filesystem thread python)
+include_directories(${Boost_INCLUDE_DIRS})
+
 find_package(Threads REQUIRED)
 
 
@@ -58,6 +61,7 @@ target_link_libraries(detect_people_server
    ${OpenCV_LIBS}
    ${OpenPose_LIBS}
    ${Caffe_LIBS}
+   ${Boost_LIBRARY_DIRS}
    Threads::Threads
  )
 
