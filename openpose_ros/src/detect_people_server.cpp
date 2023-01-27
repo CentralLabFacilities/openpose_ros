@@ -1215,7 +1215,8 @@ bool waitForImages() {
     boost::shared_ptr<sensor_msgs::CameraInfo const> msg2;
     ros::topic::MessagesHelper<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> helper;
     helper.waitForMessages(image_rgb_topic, image_depth_topic, camera_depth_info_topic,
-                           *global_nh, 0.05, ros::Duration(10, 0), msg0, msg1, msg2); // TODO maybe return false if one of the msgs is empty
+                           *global_nh, 0.05, ros::Duration(10, 0), msg0, msg1, msg2); 
+    if(msg0 == nullptr || msg1 == nullptr || msg2 == nullptr) return false;
     imagesCb(msg0, msg1, msg2);
     ROS_DEBUG("waitForImages() finished");
     return true;
@@ -1224,6 +1225,9 @@ bool waitForImages() {
 void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::ImageConstPtr &depth_msg, const sensor_msgs::CameraInfoConstPtr &info_depth_msg) {
     
     ROS_INFO_ONCE("First images registered by callback!");
+    ROS_INFO_STREAM_ONCE(color_msg->encoding);
+    ROS_INFO_STREAM_ONCE(depth_msg->encoding);
+    ROS_INFO_STREAM_ONCE(info_depth_msg);
 
     cv::Mat color_image;
     cv::Mat depth_image;
