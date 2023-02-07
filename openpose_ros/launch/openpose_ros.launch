@@ -2,13 +2,14 @@
 <launch>
 	<arg name="path" default="$(find openpose_ros)/../openpose/models/"/>
 	<arg name="target_frame" default="base_link" />
-	<arg name="camera_rgb_topic" default="/xtion/rgb" />
-	<arg name="camera_depth_topic" default="/xtion/depth_registered" />
+	<arg name="camera_rgb_topic" default="/xtion/rgb/image_raw" />
+	<arg name="camera_depth_topic" default="/xtion/depth_registered/image_raw" />
+	<arg name="camera_depth_info_topic" default="/xtion/depth_registered/camera_info" />
 	<arg name="subscribe" default="false" /> <!-- If true, subscribe to topics (slighly faster service calls). If false, wait for messages only when needed (far less traffic on topics). -->
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
-		<param name="image_rgb_topic" value="$(arg camera_rgb_topic)/image_raw" />
-		<param name="image_depth_topic" value="$(arg camera_depth_topic)/image_raw" />
-		<param name="camera_depth_info_topic" value="$(arg camera_depth_topic)/camera_info" />
+		<param name="image_rgb_topic" value="$(arg camera_rgb_topic)" />
+		<param name="image_depth_topic" value="$(arg camera_depth_topic)" />
+		<param name="camera_depth_info_topic" value="$(arg camera_depth_topic)" />
 		<param name="subscribe" value="$(arg subscribe)" />
 		<param name="net_input_size_width" value="320" />
 		<param name="net_input_size_height" value="160" />
