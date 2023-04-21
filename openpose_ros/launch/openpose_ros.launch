@@ -23,6 +23,6 @@
 		<param name="gpu_id" value="0" />
                 <param name="visualize" value="true" />
 		<param name="target_frame" value="$(arg target_frame)" />
-		<param name="isInMM" value="false" />
+		<param name="isInMM" value="true" />
 	</node>
 </launch>
