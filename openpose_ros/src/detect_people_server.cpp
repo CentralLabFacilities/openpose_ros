@@ -97,7 +97,7 @@ float depth_fx = 0.0;
 float depth_fy = 0.0;
 float depth_cx;
 float depth_cy;
-bool isInMM;
+
 std::mutex image_mutex_crowd;
 
 bool subscribe = true;
@@ -232,14 +232,14 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
 
     cv::Vec3f pt;
 
-    bool is16BitType = depthImage.type() == CV_16UC1; // is in mm?
+    bool is16BitType = (depthImage.type() == CV_16UC1) || (depthImage.type() == CV_8UC1); // is in mm?
 
     // Use correct principal point from calibration
     float center_x = cx; //cameraInfo.K.at(2)
     float center_y = cy; //cameraInfo.K.at(5)
 
     // Combine unit conversion (if necessary) with scaling by focal length for computing (X,Y)
-    float unit_scaling = isInMM?0.001f:1.0f;
+    float unit_scaling = is16BitType?0.001f:1.0f;
     float constant_x = unit_scaling / fx; //cameraInfo.K.at(0)
     float constant_y = unit_scaling / fy; //cameraInfo.K.at(4)
     float bad_point = std::numeric_limits<float>::quiet_NaN();
@@ -1293,9 +1293,6 @@ int main(int argc, char **argv) {
 
     target_frame_id = "map";
     localNH.param("target_frame", target_frame_id, target_frame_id);
-
-    isInMM = true;
-    localNH.param("isInMM", isInMM, isInMM);
 
     ros::NodeHandle n;
     global_nh = &n; // n stays in scope until the end of the program
