@@ -220,6 +220,7 @@ bool shirtRoiCb(openpose_ros_msgs::GetFollowRoi::Request &/*req*/, openpose_ros_
 cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy, float fx, float fy) {
 
     ROS_DEBUG("getDepth called x: %d y: %d", x, y);
+    
 
     if(!(x >=0 && x<depthImage.cols && y >=0 && y<depthImage.rows))
     {
@@ -233,6 +234,7 @@ cv::Vec3f getDepth(const cv::Mat & depthImage, int x, int y, float cx, float cy,
     cv::Vec3f pt;
 
     bool is16BitType = (depthImage.type() == CV_16UC1) || (depthImage.type() == CV_8UC1); // is in mm?
+    ROS_DEBUG_STREAM("depth type: " << depthImage.type() << " (integer_type?):" <<is16BitType);
 
     // Use correct principal point from calibration
     float center_x = cx; //cameraInfo.K.at(2)
@@ -1234,7 +1236,17 @@ void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::Im
 
     try {
         color_image = cv_bridge::toCvCopy(color_msg, sensor_msgs::image_encodings::BGR8)->image;
-        depth_image = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+        if (depth_msg->encoding == sensor_msgs::image_encodings::MONO8)
+        {
+            depth_image = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_8UC1)->image;
+        }
+        else if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+        { 
+            depth_image = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_32FC1)->image;
+        }
+        else {
+            depth_image = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+        }
     }
     catch (cv_bridge::Exception &e) {
         ROS_ERROR("cv_bridge failed to convert sensor msg: %s", e.what());
