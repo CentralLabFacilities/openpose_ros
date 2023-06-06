@@ -117,6 +117,8 @@ openpose_ros_msgs::BodyPartDetection initBodyPartDetection();
 openpose_ros_msgs::PersonDetection initPersonDetection();
 bool getCrowdAttributesCb(openpose_ros_msgs::GetCrowdAttributesWithPose::Request &req, openpose_ros_msgs::GetCrowdAttributesWithPose::Response &res);
 void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, int &width, int &height, cv::Mat image);
+void getLeftHandPos(openpose_ros_msgs::PersonDetection person, int &x, int &y);
+void getRightHandPos(openpose_ros_msgs::PersonDetection person, int &x, int &y);
 std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat image, cv::Rect &roi);
 cv::Rect getUpperBodyRoi( openpose_ros_msgs::PersonDetection person, cv::Mat image );
 cv::Rect getCrotchRoi( openpose_ros_msgs::PersonDetection person);
@@ -723,6 +725,83 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 target_frame_pose_head.pose.orientation.w = 1.0;
             }
 
+            // Left Hand
+            int l_hand_x, l_hand_y;
+            ROS_DEBUG("Calling get left hand pos");
+            getLeftHandPos(person_list.at(i), l_hand_x, l_hand_y);
+
+            geometry_msgs::PoseStamped camera_pose_left_hand;
+            geometry_msgs::PoseStamped target_frame_pose_left_hand;
+            target_frame_pose_left_hand.header.frame_id = target_frame_id;
+            bool gotLeftHand = false;
+
+            if(l_hand_x >= 0) {
+                gotLeftHand = true;
+
+                ROS_DEBUG("Left Hand pos x: %d y: %d", l_hand_x, l_hand_y);
+
+                cv::Vec3f pt_l_hand = getDepth( depth_image, l_hand_x / (color_image.cols/depth_image.cols),
+                                          l_hand_y / (color_image.rows/depth_image.rows), depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
+
+                camera_pose_left_hand.header.frame_id = frame_id;
+                camera_pose_left_hand.header.stamp = ros::Time::now();
+                camera_pose_left_hand.pose.position.x = pt_l_hand(0);
+                camera_pose_left_hand.pose.position.y = pt_l_hand(1);
+                camera_pose_left_hand.pose.position.z = pt_l_hand(2);
+                camera_pose_left_hand.pose.orientation.x = 0.0;
+                camera_pose_left_hand.pose.orientation.y = 0.0;
+                camera_pose_left_hand.pose.orientation.z = 0.0;
+                camera_pose_left_hand.pose.orientation.w = 1.0;
+            } else {
+                target_frame_pose_left_hand.header.stamp = ros::Time::now();
+                target_frame_pose_left_hand.pose.position.x = NAN;
+                target_frame_pose_left_hand.pose.position.y = NAN;
+                target_frame_pose_left_hand.pose.position.z = NAN;
+                target_frame_pose_left_hand.pose.orientation.x = 0.0;
+                target_frame_pose_left_hand.pose.orientation.y = 0.0;
+                target_frame_pose_left_hand.pose.orientation.z = 0.0;
+                target_frame_pose_left_hand.pose.orientation.w = 1.0;
+            }
+
+            // Right Hand
+            int r_hand_x, r_hand_y;
+            ROS_DEBUG("Calling get right hand pos");
+            getRightHandPos(person_list.at(i), r_hand_x, r_hand_y);
+
+            geometry_msgs::PoseStamped camera_pose_right_hand;
+            geometry_msgs::PoseStamped target_frame_pose_right_hand;
+            target_frame_pose_right_hand.header.frame_id = target_frame_id;
+            bool gotRightHand = false;
+
+            if(r_hand_x >= 0) {
+                gotRightHand = true;
+
+                ROS_DEBUG("Right Hand pos x: %d y: %d", r_hand_x, r_hand_y);
+
+                cv::Vec3f pt_r_hand = getDepth( depth_image, r_hand_x / (color_image.cols/depth_image.cols),
+                                          r_hand_y / (color_image.rows/depth_image.rows), depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
+
+                camera_pose_right_hand.header.frame_id = frame_id;
+                camera_pose_right_hand.header.stamp = ros::Time::now();
+                camera_pose_right_hand.pose.position.x = pt_r_hand(0);
+                camera_pose_right_hand.pose.position.y = pt_r_hand(1);
+                camera_pose_right_hand.pose.position.z = pt_r_hand(2);
+                camera_pose_right_hand.pose.orientation.x = 0.0;
+                camera_pose_right_hand.pose.orientation.y = 0.0;
+                camera_pose_right_hand.pose.orientation.z = 0.0;
+                camera_pose_right_hand.pose.orientation.w = 1.0;
+            } else {
+                target_frame_pose_right_hand.header.stamp = ros::Time::now();
+                target_frame_pose_right_hand.pose.position.x = NAN;
+                target_frame_pose_right_hand.pose.position.y = NAN;
+                target_frame_pose_right_hand.pose.position.z = NAN;
+                target_frame_pose_right_hand.pose.orientation.x = 0.0;
+                target_frame_pose_right_hand.pose.orientation.y = 0.0;
+                target_frame_pose_right_hand.pose.orientation.z = 0.0;
+                target_frame_pose_right_hand.pose.orientation.w = 1.0;
+            }
+
+
             try{
                 ROS_DEBUG("Transforming received position into target link coordinate system.");
                 listener->waitForTransform(camera_pose.header.frame_id, target_frame_pose.header.frame_id, camera_pose.header.stamp, ros::Duration(20.0));
@@ -730,10 +809,18 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 if(gotHead) {
                     listener->transformPose(target_frame_pose_head.header.frame_id, ros::Time(0), camera_pose_head, camera_pose_head.header.frame_id, target_frame_pose_head);
                 }
+                if(gotLeftHand) {
+                    listener->transformPose(target_frame_pose_left_hand.header.frame_id, ros::Time(0), camera_pose_left_hand, camera_pose_left_hand.header.frame_id, target_frame_pose_left_hand);
+                }
+                if(gotRightHand) {
+                    listener->transformPose(target_frame_pose_right_hand.header.frame_id, ros::Time(0), camera_pose_right_hand, camera_pose_right_hand.header.frame_id, target_frame_pose_right_hand);
+                }
             } catch(tf::TransformException ex) {
                 ROS_WARN("Failed transform: %s", ex.what());
                 target_frame_pose = camera_pose;
                 target_frame_pose_head = camera_pose_head;
+                target_frame_pose_left_hand = camera_pose_left_hand;
+                target_frame_pose_right_hand = camera_pose_right_hand;
             }
 
             if(face_id) {
@@ -778,6 +865,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
 
             attributes.pose_stamped = target_frame_pose;
             attributes.head_pose_stamped = target_frame_pose_head;
+            attributes.left_hand = target_frame_pose_left_hand;
+            attributes.right_hand = target_frame_pose_right_hand;
 
             if (shirt_color) {
 
@@ -1195,6 +1284,26 @@ void getHeadBounds(openpose_ros_msgs::PersonDetection person, int &x, int &y, in
     }
     if (image.size().height <= (y+height)) {
         height -= (y+height - image.size().height);
+    }
+    return;
+}
+
+void getLeftHandPos(openpose_ros_msgs::PersonDetection person, int &x, int &y){
+    if (person.LWrist.u != 0 && person.LWrist.v != 0) {
+        x = person.LWrist.u;
+        y = person.LWrist.v;
+    } else {
+        x = y -1;
+    }
+    return;
+}
+
+void getRightHandPos(openpose_ros_msgs::PersonDetection person, int &x, int &y){
+    if (person.RWrist.u != 0 && person.RWrist.v != 0) {
+        x = person.RWrist.u;
+        y = person.RWrist.v;
+    } else {
+        x = y -1;
     }
     return;
 }
