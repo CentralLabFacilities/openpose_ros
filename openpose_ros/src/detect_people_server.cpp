@@ -55,10 +55,10 @@
 
 #define PI 3.14159265
 
-enum gesture{POINTING_LEFT = openpose_ros_msgs::Gesture::POINTING_LEFT, POINTING_RIGHT = openpose_ros_msgs::Gesture::POINTING_RIGHT, RAISING_LEFT_ARM = openpose_ros_msgs::Gesture::RAISING_LEFT_ARM, RAISING_RIGHT_ARM = openpose_ros_msgs::Gesture::RAISING_RIGHT_ARM, WAVING = openpose_ros_msgs::Gesture::WAVING, NEUTRAL = openpose_ros_msgs::Gesture::NEUTRAL};
+enum gesture{POINTING_LEFT = openpose_ros_msgs::Gesture::POINTING_LEFT, POINTING_RIGHT = openpose_ros_msgs::Gesture::POINTING_RIGHT, POINTING_LEFT_DOWN = openpose_ros_msgs::Gesture::POINTING_LEFT_DOWN, POINTING_RIGHT_DOWN = openpose_ros_msgs::Gesture::POINTING_RIGHT_DOWN, RAISING_LEFT_ARM = openpose_ros_msgs::Gesture::RAISING_LEFT_ARM, RAISING_RIGHT_ARM = openpose_ros_msgs::Gesture::RAISING_RIGHT_ARM, WAVING = openpose_ros_msgs::Gesture::WAVING, NEUTRAL = openpose_ros_msgs::Gesture::NEUTRAL};
 enum posture{SITTING = openpose_ros_msgs::Posture::SITTING, STANDING = openpose_ros_msgs::Posture::STANDING, LYING = openpose_ros_msgs::Posture::LYING};
 
-const char* gesture_name[] = { "POINTING_LEFT", "POINTING_RIGHT", "RAISING_LEFT_ARM", "RAISING_RIGHT_ARM", "WAVING", "NEUTRAL" } ;
+const char* gesture_name[] = { "POINTING_LEFT", "POINTING_RIGHT", "POINTING_LEFT_DOWN", "POINTING_RIGHT_DOWN", "RAISING_LEFT_ARM", "RAISING_RIGHT_ARM", "WAVING", "NEUTRAL" } ;
 const char* posture_name[] = { "SITTING", "STANDING", "LYING" } ;
 int gpu_id;
 std::string models_folder;
@@ -952,6 +952,18 @@ openpose_ros_msgs::PersonAttributesWithPose getPostureAndGesture(openpose_ros_ms
             gestures.push_back(gesture);
     }
     if ( ( ( 0 <= LShoulderLWristAngle && LShoulderLWristAngle <= 15 ) || ( 165 <= LShoulderLWristAngle && LShoulderLWristAngle <= 180 ) ) &&
+                person.LShoulder.confidence > 0 && person.LWrist.confidence > 0 ) {
+            gesture = openpose_ros_msgs::Gesture();
+            gesture.gesture = openpose_ros_msgs::Gesture::POINTING_LEFT;
+            gestures.push_back(gesture);
+    }
+    if ( ( ( 20 <= RShoulderRWristAngle && RShoulderRWristAngle <= 60 ) || ( 120 <= RShoulderRWristAngle && RShoulderRWristAngle <= 160 ) ) &&
+                person.RShoulder.confidence >= 0 && person.RWrist.confidence >= 0 ) {
+            gesture = openpose_ros_msgs::Gesture();
+            gesture.gesture = openpose_ros_msgs::Gesture::POINTING_RIGHT_DOWN;
+            gestures.push_back(gesture);
+    }
+    if ( ( ( 20 <= LShoulderLWristAngle && LShoulderLWristAngle <= 60 ) || ( 120 <= LShoulderLWristAngle && LShoulderLWristAngle <= 160 ) ) &&
                 person.LShoulder.confidence > 0 && person.LWrist.confidence > 0 ) {
             gesture = openpose_ros_msgs::Gesture();
             gesture.gesture = openpose_ros_msgs::Gesture::POINTING_LEFT;
