@@ -659,6 +659,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             // HERE DEPTH LOOKUP FOR PERSONS! use FRAMEID FOR TF FROM CAMERA TO MAP!
             cv::Rect roi = getUpperBodyRoi( person_list.at(i),color_image );
 
+            attributes.estimate_angle = depth_cx - ((roi.x + roi.width/2) / (color_image.cols/depth_image.cols));
+
             cv::Vec3f pt = getDepth( depth_image, (roi.x + roi.width/2) / (color_image.cols/depth_image.cols), (roi.y + roi.height/2) / (color_image.rows/depth_image.rows),
                                      depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
