@@ -1174,11 +1174,11 @@ std::string getPixelColorType(cv::Scalar hsv_val)
     double V = hsv_val[2];
 
     std::string color;
-    if (V < 75)
+    if (V < 15)
         color = "black";
-    else if (V > 190 && S < 27)
+    else if (V > 215 && S < 27)
         color = "white";
-    else if (S < 60 && V < 190)
+    else if (S < 60 && V < 215)
         color = "grey";
     else {    // Is a color
         if (H < 14)
