@@ -6,6 +6,7 @@
 #include <openpose/pose/poseExtractorCaffe.hpp>
 #include <openpose/pose/poseParameters.hpp>
 #include <openpose/core/headers.hpp>
+#include <openpose/core/matrix.hpp>
 
 #include <openpose/filestream/headers.hpp>
 #include <openpose/gui/headers.hpp>
@@ -336,11 +337,12 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
     std::vector<op::Point<int>> net_input_sizes;
     double scale_input_to_output;
     op::Point<int> output_resolution;
-    op::ScaleAndSizeExtractor scaleAndSizeExtractor(net_input_size, output_size, scale_number, scale_gap);
+    op::ScaleAndSizeExtractor scaleAndSizeExtractor(net_input_size, 0, output_size, scale_number, scale_gap);
     std::tie(scale_input_to_net_inputs, net_input_sizes, scale_input_to_output, output_resolution)
         = scaleAndSizeExtractor.extract(image_size);
 
-    const auto netInputArray = cvMatToOpInput->createArray(color_image, scale_input_to_net_inputs, net_input_sizes);
+    op::Matrix op_color_image = op::Matrix((void*)&(color_image));
+    const auto netInputArray = cvMatToOpInput->createArray(op_color_image, scale_input_to_net_inputs, net_input_sizes);
 
     ROS_DEBUG("Making caffe inference ...");
     poseExtractorCaffe->forwardPass(netInputArray, image_size, scale_input_to_net_inputs);
@@ -528,9 +530,12 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
         if (visualize) {
             pose_renderer = new  op::PoseCpuRenderer{pose_model,0.5,true,0.5,0.5};
             op::Array<float> output_array;
-            output_array = cvMatToOpOutput.createArray(color_image, scale_input_to_output, output_resolution);
+            op::Matrix op_color_image = op::Matrix((void*)&(color_image));
+            output_array = cvMatToOpOutput.createArray(op_color_image, scale_input_to_output, output_resolution);
             pose_renderer->renderPose(output_array,pose_key_points,scale_input_to_output);
-            output_image = opOutputToCvMat.formatToCvMat(output_array);
+            //cv::Mat lolterror = ((cv::Mat)((output_array).getCvMat()))
+            auto why = *((cv::Mat*)opOutputToCvMat.formatToCvMat(output_array).getCvMat());
+            output_image = why;
             delete pose_renderer; // destruct and free memory
         }
 
