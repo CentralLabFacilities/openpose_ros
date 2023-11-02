@@ -533,8 +533,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             op::Matrix op_color_image = op::Matrix((void*)&(color_image));
             output_array = cvMatToOpOutput.createArray(op_color_image, scale_input_to_output, output_resolution);
             pose_renderer->renderPose(output_array,pose_key_points,scale_input_to_output);
-            // opOutputToCvMat.formatToCvMat returns op::Mat LOL
-            // op::Mat.getCvMat() return void*
+            //cv::Mat lolterror = ((cv::Mat)((output_array).getCvMat()))
             auto why = *((cv::Mat*)opOutputToCvMat.formatToCvMat(output_array).getCvMat());
             output_image = why;
             delete pose_renderer; // destruct and free memory
