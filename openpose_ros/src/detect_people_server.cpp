@@ -103,6 +103,7 @@ std::mutex image_mutex_crowd;
 
 bool subscribe = true;
 bool visualize;
+bool preview = false;
 bool gender_age = false;
 bool face_id = false;
 bool shirt_color = true;
@@ -428,7 +429,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 roi.width = crop_width;
                 roi.height = crop_height;
                 cv::Mat crop = color_image(roi);
-                if(visualize){
+                if(preview){
                     cv::imshow("CLF Learn Face | FaceID", crop);
                     cv::waitKey(3);
                 }
@@ -594,7 +595,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                         roi.width = crop_width;
                         roi.height = crop_height;
                         cv::Mat crop = color_image(roi);
-                        if(visualize){
+                        if(preview){
                             cv::imshow("CLF OpenPose | GA", crop);
                             cv::waitKey(3);
                         }
@@ -863,7 +864,7 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 }
             }
 
-            if(visualize) {
+            if(preview) {
                 cv::imshow("CLF OpenPose", output_image);
                 cv::waitKey(3);
             }
@@ -1226,7 +1227,7 @@ std::string getShirtColor(openpose_ros_msgs::PersonDetection person, cv::Mat ima
         return "NO_BOUNDING_BOX";
     }
 
-    if(visualize) {
+    if(preview) {
         cv::imshow("CLF OpenPose | SHIRT", crop_img);
         cv::waitKey(3);
     }
@@ -1395,7 +1396,7 @@ void imagesCb(const sensor_msgs::ImageConstPtr &color_msg, const sensor_msgs::Im
     depth_cx = info_depth_msg->P[2];
     depth_fy = info_depth_msg->P[5];
     depth_cy = info_depth_msg->P[6];
-    if (visualize) {
+    if (preview) {
         cv::imshow("CLF OpenPose | Crowd", input_image_rgb_crowd);
         cv::resizeWindow("CLF OpenPose | Crowd", 640, 480);
         cv::waitKey(3);
@@ -1472,6 +1473,7 @@ int main(int argc, char **argv) {
     coco_body_parts = op::getPoseBodyPartMapping(pose_model);
 
     localNH.param("visualize", visualize, true);
+    localNH.param("preview", preview, false);
 
     if(subscribe) {
         message_filters::Subscriber<sensor_msgs::Image> image_color_sub(n, image_rgb_topic, 1);
