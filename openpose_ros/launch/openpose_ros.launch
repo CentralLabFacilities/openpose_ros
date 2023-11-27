@@ -6,6 +6,9 @@
 	<arg name="camera_depth_topic" default="/xtion/depth_registered/image_raw" />
 	<arg name="camera_depth_info_topic" default="/xtion/depth_registered/camera_info" />
 	<arg name="subscribe" default="false" /> <!-- If true, subscribe to topics (slighly faster service calls). If false, wait for messages only when needed (far less traffic on topics). -->
+	<arg name="visual" default="true" />
+	<arg name="prev" default="false" />
+	<arg name="subscribe" default="false" />
 	<node name="detect_people_server" pkg="openpose_ros" type="detect_people_server"  output="screen" >
 		<param name="image_rgb_topic" value="$(arg camera_rgb_topic)" />
 		<param name="image_depth_topic" value="$(arg camera_depth_topic)" />
@@ -21,7 +24,8 @@
 		<param name="scale_gap" value="0.3" />
         <param name="models_folder" value="$(arg path)" />
 		<param name="gpu_id" value="0" />
-        <param name="visualize" value="false" />
+        <param name="visualize" value="$(arg visual)" />
+		<param name="preview" value="$(arg prev)" />
 		<param name="target_frame" value="$(arg target_frame)" />
 		<param name="isInMM" value="true" />
 	</node>
