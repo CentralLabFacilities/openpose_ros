@@ -10,7 +10,7 @@ find_package(catkin REQUIRED
   cv_bridge
   image_transport
   tf
-#  roslib
+  clf_perception_vision_msgs
   gender_and_age_msgs
   openpose_ros_msgs
 )
