@@ -697,6 +697,8 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
             target_frame_pose_head.header.frame_id = target_frame_id;
             bool gotHead = false;
 
+            cv::Vec3f pt_head;
+
             if(crop_x >= 0) {
                 gotHead = true;
                 cv::Rect roiHead;
@@ -708,31 +710,39 @@ std::vector<openpose_ros_msgs::PersonAttributesWithPose> getPersonList(cv::Mat c
                 ROS_DEBUG("Head Roi x: %d y: %d width: %d height: %d", crop_x, crop_y, crop_width, crop_height);
 
 
-                cv::Vec3f pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) /  (color_image.cols/depth_image.cols),
+                pt_head = getDepth( depth_image, (roiHead.x + roiHead.width/2) /  (color_image.cols/depth_image.cols),
                                               (roiHead.y + roiHead.height/2) /  (color_image.rows/depth_image.rows), depth_cx, depth_cy, depth_fx, depth_fy ); //TODO: Remove hardcoding!
 
                 //cv::Rect roidepthhead = cv::Rect(roiHead.x,roiHead.y,roiHead.width, roiHead.height);
 
-
-                camera_pose_head.header.frame_id = frame_id;
-                camera_pose_head.header.stamp = ros::Time::now();
-                camera_pose_head.pose.position.x = pt_head(0);
-                camera_pose_head.pose.position.y = pt_head(1);
-                camera_pose_head.pose.position.z = pt_head(2);
-                camera_pose_head.pose.orientation.x = 0.0;
-                camera_pose_head.pose.orientation.y = 0.0;
-                camera_pose_head.pose.orientation.z = 0.0;
-                camera_pose_head.pose.orientation.w = 1.0;
             } else {
-                target_frame_pose_head.header.stamp = ros::Time::now();
-                target_frame_pose_head.pose.position.x = NAN;
-                target_frame_pose_head.pose.position.y = NAN;
-                target_frame_pose_head.pose.position.z = NAN;
-                target_frame_pose_head.pose.orientation.x = 0.0;
-                target_frame_pose_head.pose.orientation.y = 0.0;
-                target_frame_pose_head.pose.orientation.z = 0.0;
-                target_frame_pose_head.pose.orientation.w = 1.0;
+
+                ROS_INFO("Nose conf: %f", person_list.at(i).Nose.confidence);
+                if(person_list.at(i).Nose.confidence >= -100) {
+                    auto u = person_list.at(i).Nose.u;
+                    auto v = person_list.at(i).Nose.v;
+                    gotHead= true;
+                    pt_head = getDepth( depth_image, u, v, depth_cx, depth_cy, depth_fx, depth_fy );
+                } else {
+                    pt_head = cv::Vec3f(NAN,NAN,NAN);
+                    target_frame_pose_head.header.stamp = ros::Time::now();
+                    target_frame_pose_head.pose.position.x = NAN;
+                    target_frame_pose_head.pose.position.y = NAN;
+                    target_frame_pose_head.pose.position.z = NAN;
+                    target_frame_pose_head.pose.orientation.w = 1.0;
+                }
+
             }
+
+            camera_pose_head.header.frame_id = frame_id;
+            camera_pose_head.header.stamp = ros::Time::now();
+            camera_pose_head.pose.position.x = pt_head(0);
+            camera_pose_head.pose.position.y = pt_head(1);
+            camera_pose_head.pose.position.z = pt_head(2);
+            camera_pose_head.pose.orientation.x = 0.0;
+            camera_pose_head.pose.orientation.y = 0.0;
+            camera_pose_head.pose.orientation.z = 0.0;
+            camera_pose_head.pose.orientation.w = 1.0;
 
             // Left Hand
             int l_hand_x, l_hand_y;
